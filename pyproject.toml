@@ -6,8 +6,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "glinski"
-version = "0.0.0"
-description = "glinski"
+version = "0.2.0"
+description = "Glinski's chess"
 readme = "README.rst"
 authors = [
     { name = "Johannes", email = "johannes-programming@posteo.org" },
@@ -18,7 +18,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 keywords = []
-dependencies = []
+dependencies = [
+    "isometric>=1.0.0",
+]
 requires-python = ">=3.11"
 
 [project.license]
@@ -27,4 +29,5 @@ file = "LICENSE.txt"
 [project.urls]
 Download = "https://pypi.org/project/glinski/#files"
 Source = "https://github.com/johannes-programming/glinski"
+
 
