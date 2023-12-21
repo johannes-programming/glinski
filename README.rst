@@ -2,6 +2,11 @@
 glinski
 =======
 
+Overview
+--------
+
+Gliński's chess.
+
 Installation
 ------------
 
