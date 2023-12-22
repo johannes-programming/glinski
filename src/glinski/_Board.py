@@ -5,7 +5,7 @@ import isometric as _iso
 from glinski import _vectors
 from glinski._enums import *
 
-__all__ = ['Arrangement']
+__all__ = ['Board']
 ATTRS = [
     'clear',
     'get',
@@ -15,7 +15,7 @@ ATTRS = [
 
 
 
-class Arrangement:
+class Board:
     @property
     def data(self):
         return self._data

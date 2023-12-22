@@ -1,2 +1,2 @@
-from ._Arrangement import *
+from ._Board import *
 from ._enums import *
