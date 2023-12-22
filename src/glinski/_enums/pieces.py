@@ -38,7 +38,7 @@ class PieceType(_enum.Enum):
         playerColor:PlayerColor,
     ) -> PieceKind:
         s = _BLACK_LETTERS[self.value]
-        if playerColor:
+        if playerColor.value:
             s = s.upper()
         ans = PieceKind[s]
         return ans
@@ -57,7 +57,7 @@ class PieceKind(_enum.Enum):
     K = "♔"
     k = "♚"
     def invert(self) -> _typing.Self:
-        if self.playerColor():
+        if self.playerColor().value:
             return self.black()
         else:
             return self.white()

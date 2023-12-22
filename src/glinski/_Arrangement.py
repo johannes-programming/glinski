@@ -1,12 +1,18 @@
+import typing as _typing
+
+import isometric as _iso
+
+from glinski import _vectors
 from glinski._enums import *
 
 __all__ = ['Arrangement']
-_ATTRS = [
+ATTRS = [
     'clear',
     'get',
     'pop',
     'popitem',
 ]
+
 
 
 class Arrangement:
@@ -27,7 +33,7 @@ class Arrangement:
     def __delitem__(self, key):
         del self._data[key]
     def __getattr__(self, attr):
-        if attr in _ATTRS:
+        if attr in ATTRS:
             return getattr(self._data, attr)
         raise AttributeError(attr)
     def __str__(self) -> str:
@@ -99,10 +105,121 @@ class Arrangement:
                 self.pop(cell, None)
             else:
                 self[cell] = pieceKind
+    def check(self, currentPlayer:PlayerColor):
+        currentKing = PieceType.KING.pieceKind(currentPlayer)
+        for cell, pieceKind in self._data.items():
+            if currentKing != pieceKind:
+                continue
+            if self._check(cell):
+                return True
+        return False
+    def _check(self, cell):
+        currentKing = self[cell]
+        currentPlayer = currentKing.playerColor()
+        
+        if currentPlayer == PlayerColor.WHITE:
+            pawnVector = _vectors.BLACKPAWN
+        else:
+            pawnVector = _vectors.WHITEPAWN
+
+        # pawns
+        if self._check_directions(
+            cell=cell,
+            rotate=False,
+            hflip=True,
+            vector=pawnVector,
+            pieceTypes=[PieceType.PAWN],
+            scale=False,
+        ):
+            return True
+        # knights
+        if self._check_directions(
+            cell=cell,
+            rotate=True,
+            hflip=True,
+            vector=_vectors.KNIGHT,
+            pieceTypes=[PieceType.KNIGHT],
+            scale=False,
+        ):
+            return True
+        # unscaled file
+        if self._check_directions(
+            cell=cell,
+            rotate=True,
+            hflip=False,
+            vector=_vectors.FILE,
+            pieceTypes=[PieceType.ROOK, PieceType.QUEEN, PieceType.KING],
+            scale=False,
+        ):
+            return True
+        # scaled file
+        if self._check_directions(
+            cell=cell,
+            rotate=True,
+            hflip=False,
+            vector=_vectors.FILE,
+            pieceTypes=[PieceType.ROOK, PieceType.QUEEN],
+            scale=True,
+        ):
+            return True
+        # unscaled diagonal
+        if self._check_directions(
+            cell=cell,
+            rotate=True,
+            hflip=False,
+            vector=_vectors.DIAGONAL,
+            pieceTypes=[PieceType.BISHOP, PieceType.QUEEN, PieceType.KING],
+            scale=False,
+        ):
+            return True
+        # scaled diagonal
+        if self._check_directions(
+            cell=cell,
+            rotate=True,
+            hflip=False,
+            vector=_vectors.DIAGONAL,
+            pieceTypes=[PieceType.BISHOP, PieceType.QUEEN],
+            scale=True,
+        ):
+            return True
+        return False
     
 
 
-        
-        
-
-
+    def _check_directions(self, *, 
+        cell:Cell,
+        rotate:bool,
+        hflip:bool,
+        vector:_iso.Vector,
+        pieceTypes:_typing.List[PieceType],
+        scale:bool,
+    ):
+        currentPlayer = self[cell].playerColor()
+        vectors = [vector]
+        if hflip:
+            vectors.append(vector.hflip())
+        if scale:
+            factors = range(2, 100)
+        else:
+            factors = [1]
+        if rotate:
+            stepss = range(6)
+        else:
+            stepss = [0]
+        for steps in stepss:
+            for v in vectors:
+                for n in factors:
+                    w = cell.value - (v * n).rotate(steps)
+                    try:
+                        checker = Cell(w)
+                    except ValueError as exc:
+                        break # over the edge
+                    if checker not in self._data.keys():
+                        continue # empty cell
+                    pieceKind = self[checker]
+                    if pieceKind.playerColor() == currentPlayer:
+                        break # same playerColor
+                    if pieceKind.pieceType() not in pieceTypes:
+                        break # not pieceType of interest
+                    return True # found source of check
+        return False

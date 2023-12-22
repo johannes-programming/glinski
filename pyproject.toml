@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "glinski"
-version = "0.3.1"
+version = "0.3.2"
 description = "Gliński's chess"
 readme = "README.rst"
 authors = [

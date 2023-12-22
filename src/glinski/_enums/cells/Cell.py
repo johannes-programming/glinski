@@ -3,6 +3,7 @@ import enum as _enum
 import isometric as _iso
 
 from glinski._enums import pieces
+from glinski._enums.cells.Column import Column
 from glinski._enums.PlayerColor import PlayerColor
 
 from .CellColor import CellColor
@@ -19,14 +20,18 @@ BLACKSNATIVES['f11'] = 'b'
 BLACKSNATIVES['g10'] = 'k'
 BLACKSNATIVES['h9'] = 'n'
 BLACKSNATIVES['i8'] = 'r'
-for c in "bcdefghik":
+for column in Column:
+    if column in [Column.a, Column.l]:
+        continue
+    c = column.name
     BLACKSNATIVES[f"{c}7"] = 'p'
 NATIVES = dict()
 
-BLACKSPAWNGOALS = dict()
-for c in "abcdefghikl":
-    BLACKSPAWNGOALS[f"{c}1"] = PlayerColor.BLACK
-PAWNGOALS = dict()
+BLACKPROMOTIONS = dict()
+for column in Column:
+    c = column.name
+    BLACKPROMOTIONS[f"{c}1"] = PlayerColor.BLACK
+PROMOTIONS = dict()
 
 class BaseCell:
     def column(self):
@@ -47,8 +52,8 @@ class BaseCell:
         return cls(self.value.vflip())
     def native(self):
         return NATIVES.get(self)
-    def pawngoal(self):
-        return PAWNGOALS.get(self)
+    def promotion(self):
+        return PROMOTIONS.get(self)
         
 
 
@@ -71,8 +76,8 @@ for k, v in BLACKSNATIVES.items():
     whitesPieceKind = blacksPieceKind.invert()
     NATIVES[whitesCell] = whitesPieceKind
 
-for k, v in BLACKSPAWNGOALS.items():
+for k, v in BLACKPROMOTIONS.items():
     blacksCell = Cell[k]
-    PAWNGOALS[blacksCell] = PlayerColor.BLACK
+    PROMOTIONS[blacksCell] = PlayerColor.BLACK
     whitesCell = blacksCell.vflip()
-    PAWNGOALS[whitesCell] = PlayerColor.WHITE
+    PROMOTIONS[whitesCell] = PlayerColor.WHITE
