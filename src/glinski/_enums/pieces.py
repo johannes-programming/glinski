@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import enum as _enum
-import typing as _typing
+import typing
+from enum import Enum
 
-from .PlayerColor import PlayerColor
+from .players import *
 
 __all__ = [
     'PieceType',
     'PieceKind',
 ]
 
-_BLACK_LETTERS = {
+BLACKLETTERS = {
     1:'p',
     2:'n',
     3:'b',
@@ -19,31 +19,35 @@ _BLACK_LETTERS = {
     6:'k',
 }
 
-class PieceType(_enum.Enum):
+class PieceType(Enum):
     PAWN = 1
     KNIGHT = 2
     BISHOP = 3
     ROOK = 4
     QUEEN = 5
     KING = 6
-    def white(self) -> PieceKind:
-        return self.pieceKind(
-            playerColor=PlayerColor.WHITE,
-        )
     def black(self) -> PieceKind:
-        return self.pieceKind(
-            playerColor=PlayerColor.BLACK,
-        )
-    def pieceKind(self, 
-        playerColor:PlayerColor,
-    ) -> PieceKind:
-        s = _BLACK_LETTERS[self.value]
-        if playerColor.value:
+        return self.pieceKind(Player.BLACK)
+    def pieceKind(self, player:Player) -> PieceKind:
+        s = BLACKLETTERS[self.value]
+        if player.value:
             s = s.upper()
         ans = PieceKind[s]
         return ans
+    def promotion(self) -> bool:
+        return self in self.promotions()
+    @classmethod
+    def promotions(cls) -> typing.Set[typing.Self]:
+        return {
+            cls.KNIGHT,
+            cls.BISHOP,
+            cls.ROOK,
+            cls.QUEEN,
+        }
+    def white(self) -> PieceKind:
+        return self.pieceKind(Player.WHITE)
 
-class PieceKind(_enum.Enum):
+class PieceKind(Enum):
     P = "♙"
     p = "♟"
     N = "♘"
@@ -56,23 +60,23 @@ class PieceKind(_enum.Enum):
     q = "♛"
     K = "♔"
     k = "♚"
-    def invert(self) -> _typing.Self:
-        if self.playerColor().value:
+    def black(self) -> typing.Self:
+        return self.pieceType().black()
+    def invert(self) -> typing.Self:
+        if self.player().value:
             return self.black()
         else:
             return self.white()
-    def white(self) -> _typing.Self:
-        return self.pieceType().white()
-    def black(self) -> _typing.Self:
-        return self.pieceType().black()
-    def playerColor(self) -> _typing.Self:
-        return PlayerColor(self.name < '_')
     def pieceType(self) -> PieceType:
         black_name = self.name.lower()
-        for number, letter in _BLACK_LETTERS.items():
+        for number, letter in BLACKLETTERS.items():
             if black_name == letter:
                 return PieceType(number)
         raise NotImplementedError
+    def player(self) -> typing.Self:
+        return Player(self.name < '_')
+    def white(self) -> typing.Self:
+        return self.pieceType().white()
     
 
 

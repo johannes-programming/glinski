@@ -1,3 +1,3 @@
 from .cells import *
 from .pieces import *
-from .PlayerColor import *
+from .players import *

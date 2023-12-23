@@ -1,8 +1,8 @@
-import enum as _enum
+from enum import Enum
 
-__all__ = ['PlayerColor']
+__all__ = ['Player']
 
-class PlayerColor(_enum.Enum):
+class Player(Enum):
     BLACK = False
     WHITE = True
     def invert(self):
