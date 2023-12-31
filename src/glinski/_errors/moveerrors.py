@@ -1,9 +1,9 @@
 
 
-class MoveError(Exception):
+class MoveError(ValueError):
     pass
-class InvalidMoveError(MoveError):
+class IllegalMoveError(MoveError):
     pass
-class UnresolvedCheckError(MoveError):
+class UnsoundMoveError(IllegalMoveError):
     pass
 
