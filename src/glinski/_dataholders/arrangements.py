@@ -75,7 +75,7 @@ class BaseArrangement:
                     if p is None:
                         continue
                     if p.player == player:
-                        if p.pieceType in pTs:
+                        if p.kind in pTs:
                             ans.add(c)
                     break
         return ans
@@ -112,7 +112,7 @@ class BaseArrangement:
                 continue
             if p.player == player:
                 continue
-            if p.pieceType != PieceType.KING:
+            if p.kind != PieceKind.KING:
                 continue
             ans |= self.attackers(
                 c,

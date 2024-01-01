@@ -5,14 +5,14 @@ from enum import Enum
 
 from .players import *
 
-__all__ = ['PieceType']
+__all__ = ['PieceKind']
 
 
 
 NOTATIONS = None
 PROMOTIONS = None
 
-class PieceType(Enum):
+class PieceKind(Enum):
     PAWN = 1
     KNIGHT = 2
     BISHOP = 3
@@ -35,18 +35,18 @@ class PieceType(Enum):
         return PROMOTIONS
 
 NOTATIONS = {
-    PieceType.PAWN:"",
-    PieceType.KNIGHT:"N",
-    PieceType.BISHOP:"B",
-    PieceType.ROOK:"R",
-    PieceType.QUEEN:"Q",
-    PieceType.KING:"K",
+    PieceKind.PAWN:"",
+    PieceKind.KNIGHT:"N",
+    PieceKind.BISHOP:"B",
+    PieceKind.ROOK:"R",
+    PieceKind.QUEEN:"Q",
+    PieceKind.KING:"K",
 }
 PROMOTIONS = {
-    PieceType.KNIGHT,
-    PieceType.BISHOP,
-    PieceType.ROOK,
-    PieceType.QUEEN,
+    PieceKind.KNIGHT,
+    PieceKind.BISHOP,
+    PieceKind.ROOK,
+    PieceKind.QUEEN,
 }
 
 

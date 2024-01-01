@@ -11,17 +11,17 @@ from .pieces import *
 __all__ = ['Move']
 
 PROMOTIONS_BY_UCI_NOTATION = dict(
-    n = PieceType.KNIGHT,
-    b = PieceType.BISHOP,
-    r = PieceType.ROOK,
-    q = PieceType.QUEEN,
+    n = PieceKind.KNIGHT,
+    b = PieceKind.BISHOP,
+    r = PieceKind.ROOK,
+    q = PieceKind.QUEEN,
 )
-OPTIONAL_PIECETYPE = typing.Optional[PieceType]
+OPTIONAL_PIECEKIND = typing.Optional[PieceKind]
 
-def _pieces(*pieceTypes:PieceType):
+def _pieces(*kinds:PieceKind):
     return {
-        Piece(pieceType=t, player=p)
-        for t in pieceTypes
+        Piece(kind=t, player=p)
+        for t in kinds
         for p in Player
     }
 
@@ -30,14 +30,16 @@ class BaseMove:
     # fields
     from_cell: Cell
     to_cell: Cell
-    promotion: OPTIONAL_PIECETYPE
+    promotion: OPTIONAL_PIECEKIND
 
     # methods
     #   public
     @classmethod
-    def from_uci(cls, value) -> typing.Self:
+    def from_uci(cls, value) -> typing.Optional[typing.Self]:
         value = str(value)
         value = value.lower()
+        if value == "0000":
+            return None
         if value[-1] in string.digits:
             promotion = None
         else:
@@ -57,7 +59,7 @@ class BaseMove:
         return ans
 
     def suspects(self) -> typing.Set[Piece]:
-        if self.promotion in {PieceType.PAWN, PieceType.KING}:
+        if self.promotion in {PieceKind.PAWN, PieceKind.KING}:
             return set()
         if self.promotion is not None:
             if self.from_cell.promotion() is not None:
@@ -68,7 +70,7 @@ class BaseMove:
             return {
                 Piece(
                     player=p,
-                    pieceType=PieceType.PAWN,
+                    kind=PieceKind.PAWN,
                 )
             }
         if self.from_cell == self.to_cell:
@@ -81,27 +83,27 @@ class BaseMove:
             if n > 1:
                 return set()
             return _pieces(
-                PieceType.KNIGHT,
+                PieceKind.KNIGHT,
             )
         if a == 3 ** .5:
             ans = _pieces(
-                PieceType.BISHOP, 
-                PieceType.QUEEN,
+                PieceKind.BISHOP, 
+                PieceKind.QUEEN,
             )
             if n > 1:
                 return ans
-            ans |= _pieces(PieceType.KING)
+            ans |= _pieces(PieceKind.KING)
             if s == 0:
                 return ans
             p = Player(s > 0)
             if self.to_cell.promotion(p):
                 return ans
-            ans.add(Piece(pieceType=PieceType.PAWN, player=p))
+            ans.add(Piece(kind=PieceKind.PAWN, player=p))
             return ans
         if a == 1 ** .5:
             ans = _pieces(
-                PieceType.ROOK, 
-                PieceType.QUEEN,
+                PieceKind.ROOK, 
+                PieceKind.QUEEN,
             )
             if n > 2:
                 return ans
@@ -111,17 +113,17 @@ class BaseMove:
                 native = self.from_cell.native()
                 if native is None:
                     return ans
-                if native.pieceType != PieceType.PAWN:
+                if native.kind != PieceKind.PAWN:
                     return ans
                 if native.player != Player(w.digest().y > 0):
                     return ans
                 ans.add(native)
                 return ans
-            ans |= _pieces(PieceType.KING)
+            ans |= _pieces(PieceKind.KING)
             p = Player(s > 0)
             if self.to_cell.promotion(p):
                 return ans
-            ans.add(Piece(pieceType=PieceType.PAWN, player=p))
+            ans.add(Piece(kind=PieceKind.PAWN, player=p))
             return ans
         return set()
 
@@ -149,13 +151,13 @@ class Move(BaseMove):
     def __init__(self, *,
         from_cell:Cell,
         to_cell:Cell,
-        promotion:OPTIONAL_PIECETYPE,
+        promotion:OPTIONAL_PIECEKIND,
     ) -> None:
         for cell in (from_cell, to_cell):
             if type(cell) is not Cell:
                 raise TypeError(cell)
         if promotion is not None:
-            if type(promotion) is not PieceType:
+            if type(promotion) is not PieceKind:
                 raise TypeError(promotion)
         super().__init__(
             from_cell=from_cell,

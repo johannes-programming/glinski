@@ -12,14 +12,14 @@ __all__ = ['AttackerFinder']
 @dataclass(frozen=True)
 class BaseAttackerFinder:
     motion:Motion
-    scaled:typing.FrozenSet[PieceType]
-    unscaled:typing.FrozenSet[PieceType]
+    scaled:typing.FrozenSet[PieceKind]
+    unscaled:typing.FrozenSet[PieceKind]
 
     def _direction(self, *,
         origin:Cell, 
         unit:Vector,
     ) -> typing.Generator[
-        typing.Tuple[Cell, typing.FrozenSet[PieceType]], 
+        typing.Tuple[Cell, typing.FrozenSet[PieceKind]], 
         None, 
         None,
     ]:
@@ -45,8 +45,8 @@ class AttackerFinder(BaseAttackerFinder):
     def __init__(self, 
         *,
         motion:Motion,
-        scaled:typing.Iterable[PieceType]=[],
-        unscaled:typing.Iterable[PieceType]=[],
+        scaled:typing.Iterable[PieceKind]=[],
+        unscaled:typing.Iterable[PieceKind]=[],
     ) -> None:
         if type(motion) is not Motion:
             raise TypeError(motion)
@@ -54,7 +54,7 @@ class AttackerFinder(BaseAttackerFinder):
         unscaled = frozenset(unscaled)
         for f in (scaled, unscaled):
             for t in f:
-                if type(t) is not PieceType:
+                if type(t) is not PieceKind:
                     raise TypeError(t)
         super().__init__(
             motion=motion,
