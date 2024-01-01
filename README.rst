@@ -27,6 +27,11 @@ Links
 * `Download <https://pypi.org/project/glinski/#files>`_
 * `Source <https://github.com/johannes-programming/glinski>`_
 
+Dedication
+----------
+
+To my late grandfather who tought me chess.
+
 Credits
 -------
 - Author: Johannes
