@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-from glinski._enums import *
-from enum import Enum
 import typing
+from dataclasses import dataclass
+from enum import Enum
+
+from .outcomes import *
+from .players import *
 
 __all__ = ['Termination']
 
@@ -20,7 +21,7 @@ class Termination(BaseTermination):
         STALEMATE = 2
         SEVENTYFIVE_MOVES = 4
         FIVEFOLD_REPETITION = 5
-        def for_subject(self) -> typing.:
+        def for_subject(self) -> float:
             cls = type(self)
             ans = {
                 cls.CHECKMATE:1.00,
@@ -29,7 +30,7 @@ class Termination(BaseTermination):
                 cls.FIVEFOLD_REPETITION:0.50,
             }[self]
             return ans
-        def for_opponent(self):
+        def for_opponent(self) -> float:
             x = self.for_subject()
             if x is None:
                 return None

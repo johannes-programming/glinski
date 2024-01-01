@@ -6,8 +6,6 @@ from enum import Enum, IntEnum
 import upcounting
 from isometric import Vector
 
-from glinski._dataholders.pieces import *
-
 from .colors import *
 from .pieces import *
 from .players import *

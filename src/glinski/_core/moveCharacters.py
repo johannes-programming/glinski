@@ -1,8 +1,6 @@
 import typing
 from dataclasses import dataclass
 
-from glinski._enums import *
-
 from .pieces import *
 
 __all__ = ['MoveCharacter']

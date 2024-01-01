@@ -1,10 +1,10 @@
 import typing
 
-from glinski._dataholders.moves import *
-from glinski._dataholders.positions import *
-from glinski._dataholders.terminations import *
-from glinski._enums import *
-from glinski._errors import *
+from .errors import *
+from .moves import *
+from .players import *
+from .positions import *
+from .terminations import *
 
 __all__ = ['Game']
 

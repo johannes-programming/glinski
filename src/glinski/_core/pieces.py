@@ -4,8 +4,7 @@ import typing
 from dataclasses import dataclass
 from enum import Enum
 
-from glinski._enums import *
-
+from .players import Player
 
 __all__ = ['Piece']
 

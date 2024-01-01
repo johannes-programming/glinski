@@ -1,10 +1,10 @@
 import typing
 from dataclasses import dataclass
 
-from glinski._consts import *
-from glinski._enums import *
-
+from .cells import *
+from .consts import *
 from .pieces import *
+from .players import *
 
 # __all__
 __all__ = ['Arrangement']

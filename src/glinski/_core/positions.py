@@ -3,14 +3,14 @@ from __future__ import annotations
 import typing
 from dataclasses import asdict, dataclass
 
-from glinski._consts import *
-from glinski._enums import *
-from glinski._errors import *
-
 from .arrangements import *
+from .cells import *
+from .consts import *
+from .errors import *
 from .moveCharacters import *
 from .moves import *
 from .pieces import *
+from .players import *
 from .terminations import *
 
 __all__ = ['Position']

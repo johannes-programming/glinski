@@ -3,9 +3,8 @@ from dataclasses import dataclass
 
 from isometric import Vector
 
-from glinski._enums import *
-
 __all__ = ['Motion']
+
 
 @dataclass(frozen=True)
 class BaseMotion:

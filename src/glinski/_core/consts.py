@@ -2,16 +2,13 @@ import typing
 
 from isometric import Vector
 
-from glinski._dataholders.attackerFinders import *
-from glinski._dataholders.attackFinders import *
-from glinski._dataholders.motions import *
-from glinski._dataholders.pieces import *
-from glinski._enums.pieces import *
-from glinski._enums.players import *
+from .attackerFinders import *
+from .attackFinders import *
+from .motions import *
+from .pieces import *
+from .players import *
 
 __all__ = ['consts']
-
-
 
 
 class _staticclass:

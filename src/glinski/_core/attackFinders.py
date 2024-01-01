@@ -3,8 +3,7 @@ from dataclasses import dataclass
 
 from isometric import Vector
 
-from glinski._enums import *
-
+from .cells import *
 from .motions import *
 
 __all__ = ['AttackFinder']

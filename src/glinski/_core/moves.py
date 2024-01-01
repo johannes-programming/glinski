@@ -4,9 +4,9 @@ from dataclasses import dataclass
 
 from isometric import Vector
 
-from glinski._enums import *
-
+from .cells import *
 from .pieces import *
+from .players import *
 
 __all__ = ['Move']
 

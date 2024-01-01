@@ -3,10 +3,9 @@ from dataclasses import dataclass
 
 from isometric import Vector
 
-from glinski._dataholders import *
-from glinski._enums import *
-
+from .cells import *
 from .motions import *
+from .pieces import *
 
 __all__ = ['AttackerFinder']
 
