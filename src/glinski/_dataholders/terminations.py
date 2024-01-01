@@ -1,21 +1,44 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from glinski._enums import *
+from enum import Enum
+import typing
 
 __all__ = ['Termination']
 
 @dataclass(frozen=True)
 class BaseTermination:
-    kind:TerminationKind
+    kind:Termination.Kind
     subject:Player
     outcome:Outcome
 
 class Termination(BaseTermination):
+    class Kind(Enum):
+        CHECKMATE = 1
+        STALEMATE = 2
+        SEVENTYFIVE_MOVES = 4
+        FIVEFOLD_REPETITION = 5
+        def for_subject(self) -> typing.:
+            cls = type(self)
+            ans = {
+                cls.CHECKMATE:1.00,
+                cls.STALEMATE:0.75,
+                cls.SEVENTYFIVE_MOVES:0.50,
+                cls.FIVEFOLD_REPETITION:0.50,
+            }[self]
+            return ans
+        def for_opponent(self):
+            x = self.for_subject()
+            if x is None:
+                return None
+            return 1.0 - x
     def __init__(self, *, 
-        kind:TerminationKind,
+        kind:Termination.Kind,
         subject:Player,
     ):
-        if type(kind) is not TerminationKind:
+        if type(kind) is not Termination.Kind:
             raise TypeError(kind)
         if type(subject) is not Player:
             raise TypeError(subject)

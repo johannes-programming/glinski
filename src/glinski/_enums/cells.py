@@ -187,7 +187,7 @@ def natives() -> typing.Dict[Cell, Piece]:
     ans = dict()
     for k, v in blacknatives().items():
         blacksCell = Cell[k]
-        blacksPiece = Piece.from_symbol(v)
+        blacksPiece = Piece.by_symbol(v)
         ans[blacksCell] = blacksPiece
         whitesCell = blacksCell.vflip()
         whitesPiece = blacksPiece.invert()

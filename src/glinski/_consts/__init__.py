@@ -51,7 +51,7 @@ class attackFinders(_staticclass):
     def finder(cls, piece:Piece):
         if type(piece) is not Piece:
             raise TypeError(piece)
-        if piece.kind != PieceKind.PAWN:
+        if piece.kind != Piece.Kind.PAWN:
             return getattr(cls, piece.kind.name)
         return getattr(cls, piece.player.name + '_PAWN_ATTACK')
     WHITE_PAWN_ATTACK = AttackFinder(
@@ -96,24 +96,24 @@ class attackerFinders:
 
     DIAGONAL = AttackerFinder(
         motion=consts.motions.DIAGONAL,
-        scaled={PieceKind.BISHOP, PieceKind.QUEEN},
-        unscaled={PieceKind.KING},
+        scaled={Piece.Kind.BISHOP, Piece.Kind.QUEEN},
+        unscaled={Piece.Kind.KING},
     )
     FILE = AttackerFinder(
         motion=consts.motions.FILE,
-        scaled={PieceKind.ROOK, PieceKind.QUEEN},
-        unscaled={PieceKind.KING},
+        scaled={Piece.Kind.ROOK, Piece.Kind.QUEEN},
+        unscaled={Piece.Kind.KING},
     )
     HORSE = AttackerFinder(
         motion=consts.motions.HORSE,
-        unscaled={PieceKind.KNIGHT},
+        unscaled={Piece.Kind.KNIGHT},
     )
     PAWN_ATTACKS_BY_PLAYER = dict()
 consts.attackerFinders = attackerFinders
 for player, motion in consts.motions.PAWN_ATTACKS_BY_PLAYER.items():
     consts.attackerFinders.PAWN_ATTACKS_BY_PLAYER[player] = AttackerFinder(
         motion=motion,
-        unscaled={PieceKind.PAWN},
+        unscaled={Piece.Kind.PAWN},
     )
 
 

@@ -112,7 +112,7 @@ class BaseArrangement:
                 continue
             if p.player == player:
                 continue
-            if p.kind != PieceKind.KING:
+            if p.kind != Piece.Kind.KING:
                 continue
             ans |= self.attackers(
                 c,

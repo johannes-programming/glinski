@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from isometric import Vector
 
+from glinski._dataholders import *
 from glinski._enums import *
 
 from .motions import *
@@ -12,14 +13,14 @@ __all__ = ['AttackerFinder']
 @dataclass(frozen=True)
 class BaseAttackerFinder:
     motion:Motion
-    scaled:typing.FrozenSet[PieceKind]
-    unscaled:typing.FrozenSet[PieceKind]
+    scaled:typing.FrozenSet[Piece.Kind]
+    unscaled:typing.FrozenSet[Piece.Kind]
 
     def _direction(self, *,
         origin:Cell, 
         unit:Vector,
     ) -> typing.Generator[
-        typing.Tuple[Cell, typing.FrozenSet[PieceKind]], 
+        typing.Tuple[Cell, typing.FrozenSet[Piece.Kind]], 
         None, 
         None,
     ]:
@@ -45,8 +46,8 @@ class AttackerFinder(BaseAttackerFinder):
     def __init__(self, 
         *,
         motion:Motion,
-        scaled:typing.Iterable[PieceKind]=[],
-        unscaled:typing.Iterable[PieceKind]=[],
+        scaled:typing.Iterable[Piece.Kind]=[],
+        unscaled:typing.Iterable[Piece.Kind]=[],
     ) -> None:
         if type(motion) is not Motion:
             raise TypeError(motion)
@@ -54,7 +55,7 @@ class AttackerFinder(BaseAttackerFinder):
         unscaled = frozenset(unscaled)
         for f in (scaled, unscaled):
             for t in f:
-                if type(t) is not PieceKind:
+                if type(t) is not Piece.Kind:
                     raise TypeError(t)
         super().__init__(
             motion=motion,

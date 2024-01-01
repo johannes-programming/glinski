@@ -41,12 +41,12 @@ class Game:
     def _terminate_by_boredom(self):
         if self.repetition() >= 5:
             self._terminate(
-                kind=TerminationKind.FIVEFOLD_REPETITION,
+                kind=Termination.Kind.FIVEFOLD_REPETITION,
                 subject=self.turn().invert(),
             )
         elif self.halfmove_clock() >= 150:
             self._terminate(
-                kind=TerminationKind.SEVENTYFIVE_MOVES,
+                kind=Termination.Kind.SEVENTYFIVE_MOVES,
                 subject=self.turn().invert(),
             )
         else:

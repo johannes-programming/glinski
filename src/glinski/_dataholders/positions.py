@@ -49,7 +49,7 @@ class BasePosition:
         for c in trajectory:
             if self.arrangement[c] is not None:
                 raise UnsoundMoveError
-        if ans.subject.kind != PieceKind.PAWN:
+        if ans.subject.kind != Piece.Kind.PAWN:
             return ans
         if move.vector().digest().x:
             if self.ep_cell() == move.to_cell:
@@ -117,7 +117,7 @@ class BasePosition:
 
         # ep_column
         ep_column = None
-        if moveCharacter.subject.kind == PieceKind.PAWN:
+        if moveCharacter.subject.kind == Piece.Kind.PAWN:
             if abs(move.vector()) == 2:
                 walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
                 attack_motion = consts.motions.PAWN_ATTACKS_BY_PLAYER[self.turn]
@@ -172,7 +172,7 @@ class BasePosition:
             attack_motion = consts.motions.PAWN_ATTACKS_BY_PLAYER[self.turn]
             further = self.ep_cell().apply(-walk)
             ep_victim = self.arrangement[further]
-            if ep_victim != Piece(kind=PieceKind.PAWN, player=self.turn.invert()):
+            if ep_victim != Piece(kind=Piece.Kind.PAWN, player=self.turn.invert()):
                 return False
             ep_attacking_cells = set()
             for attack in attack_motion:
@@ -184,11 +184,11 @@ class BasePosition:
         for c, p in self.arrangement.items():
             if p is None:
                 continue
-            if p.kind == PieceKind.KING:
+            if p.kind == Piece.Kind.KING:
                 if kingthere[p.player]:
                     return False
                 kingthere[p.player] = True
-            if p.kind == PieceKind.PAWN:
+            if p.kind == Piece.Kind.PAWN:
                 if not c.pawn_legal(p.player):
                     return False
         if not all(kingthere.values()):
@@ -217,7 +217,7 @@ class BasePosition:
     
     def is_zeroing(self, move:Move) -> bool:
         character = self._moveCharacter(move)
-        if character.subject.kind == PieceKind.PAWN:
+        if character.subject.kind == Piece.Kind.PAWN:
             return True
         if character.is_capture():
             return True
@@ -256,7 +256,7 @@ class BasePosition:
                 continue
             if p.player != self.turn:
                 continue
-            if p.kind != PieceKind.PAWN:
+            if p.kind != Piece.Kind.PAWN:
                 to_cells = self.arrangement.attacks(c)
                 for to_cell in to_cells:
                     move = Move(
@@ -276,7 +276,7 @@ class BasePosition:
                     )
                     ans.add(move)
                     continue
-                for promotion in PieceKind.promotions():
+                for promotion in Piece.Kind.promotions():
                     move = Move(
                         from_cell=c,
                         to_cell=to_cell,
@@ -289,9 +289,9 @@ class BasePosition:
         if len(self.position().legal_moves()):
             return None
         if self.position().is_check():
-            kind = TerminationKind.CHECKMATE
+            kind = Termination.Kind.CHECKMATE
         else:
-            kind = TerminationKind.STALEMATE
+            kind = Termination.Kind.STALEMATE
         ans = Termination(
             kind=kind,
             subject=self.turn.invert(),

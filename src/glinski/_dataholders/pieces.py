@@ -2,37 +2,18 @@ from __future__ import annotations
 
 import typing
 from dataclasses import dataclass
+from enum import Enum
 
-from glinski._enums.pieces import *
-from glinski._enums.players import *
+from glinski._enums import *
+
 
 __all__ = ['Piece']
 
-WHITE_SYMBOLS = {
-    PieceKind.PAWN:'P',
-    PieceKind.KNIGHT:'N',
-    PieceKind.BISHOP:'B',
-    PieceKind.ROOK:'R',
-    PieceKind.QUEEN:'Q',
-    PieceKind.KING:'K',
-}
 
 @dataclass(frozen=True)
 class BasePiece:
-    kind:PieceKind
+    kind:Piece.Kind
     player:Player
-    @classmethod
-    def from_symbol(cls, symbol: str) -> Piece:
-        if type(symbol) is not str:
-            raise TypeError(symbol)
-        for kind, white_symbol in WHITE_SYMBOLS.items():
-            if white_symbol != symbol.upper():
-                continue
-            return cls(
-                kind=kind,
-                player=Player(white_symbol == symbol),
-            )
-        raise ValueError(symbol)
     def invert(self) -> typing.Self:
         cls = type(self)
         ans = cls(
@@ -41,23 +22,77 @@ class BasePiece:
         )
         return ans
     def symbol(self) -> str:
-        ans = WHITE_SYMBOLS[self.kind]
+        ans = self.kind.value
+        if ans == '':
+            ans = 'P'
         if self.player == Player.BLACK:
             ans = ans.lower()
         return ans
+    @classmethod
+    def by_symbol(cls, value: str) -> Piece:
+        if type(value) is not str:
+            raise TypeError(value)
+        for player in Player:
+            for kind in Piece.Kind:
+                ans = cls(player=player, kind=kind)
+                if ans.symbol() == value:
+                    return ans
+        raise ValueError(value)
+    
     def unicode_symbol(self) -> str:
         code = 9824
         code -= int(self.player.value) * 6
         code -= self.kind.value
         ans = chr(code)
         return ans
+    @classmethod
+    def by_unicode_symbol(cls, value:str) -> typing.Self:
+        if type(value) is not str:
+            raise TypeError(value)
+        for player in Player:
+            for kind in Piece.Kind:
+                ans = cls(player=player, kind=kind)
+                if ans.unicode_symbol() == value:
+                    return ans
+        raise ValueError(value)
 
 class Piece(BasePiece):
+    class Kind(Enum):
+        PAWN = ''
+        KNIGHT = 'N'
+        BISHOP = 'B'
+        ROOK = 'R'
+        QUEEN = 'Q'
+        KING = 'K'
+        def algebraic(self):
+            return self.value
+        @classmethod
+        def by_algebraic(cls, value):
+            return cls[value]
+        def uci(self) -> typing.Optional[str]:
+            if self.value in {'', 'K'}:
+                return None
+            else:
+                return self.value.lower()
+        @classmethod
+        def by_uci(cls, value:str, /) -> typing.Self:
+            if type(value) is not str:
+                raise TypeError(value)
+            for k in cls:
+                if value == k.uci():
+                    return k
+            raise ValueError(value)
+        def promotion(self) -> bool:
+            return self.uci() is not None
+        @classmethod
+        def promotions(cls) -> typing.Set[typing.Self]:
+            return {x for x in cls if x.promotion()}
+
     def __init__(self, *, 
-        kind:PieceKind, 
+        kind:Piece.Kind, 
         player:Player,
     ):
-        if type(kind) is not PieceKind:
+        if type(kind) is not Piece.Kind:
             raise TypeError(kind)
         if type(player) is not Player:
             raise TypeError(player)
@@ -65,4 +100,7 @@ class Piece(BasePiece):
             kind=kind,
             player=player,
         )
-    
+
+
+
+
