@@ -1,10 +1,6 @@
-class ChessError(ValueError):
+class ChessError(Exception):
     pass
-class MoveError(ChessError):
+class NotPseudolegalError(ChessError):
     pass
-class UnsoundMoveError(MoveError):
-    pass
-class AnticheckError(MoveError):
-    pass
-class GameAlreadyOverError(ChessError):
+class NotLegalError(ChessError):
     pass

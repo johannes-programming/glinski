@@ -1,17 +1,33 @@
 import typing
-from enum import Enum
+from enum import IntEnum
 
 from .colors import *
 
 __all__ = ['Player']
 
-class Player(Enum):
-    BLACK = False
-    WHITE = True
+class Player(IntEnum):
+    BLACK = 1
+    WHITE = 0
+
+    # 
+    @property
+    def fen(self) -> str:
+        return self.name[0].lower()
+    @classmethod
+    def by_fen(cls, value:str, /):
+        if type(value) is not str:
+            raise TypeError(value)
+        for item in cls:
+            if item.fen() == value:
+                return item
+        raise ValueError(value)
+    
+    # 
+    @property
     def color(self) -> Color:
-        return Color(float(self.value))
-    def invert(self) -> typing.Self:
+        return Color[self.name]
+    def opponent(self) -> typing.Self:
         cls = type(self)
-        value = not self.value
+        value = 1 - self.value
         ans = cls(value)
         return ans

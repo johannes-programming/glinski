@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import typing
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
-from .arrangements import *
+from .bitBoards import *
+from .boards import *
 from .cells import *
 from .consts import *
 from .errors import *
-from .moveCharacters import *
 from .moves import *
 from .pieces import *
 from .players import *
@@ -17,17 +17,54 @@ __all__ = ['Position']
 
 
 
-DEFAULT_ARRANGEMENT = Arrangement()
+DEFAULT_BOARD = Board()
+
+
+
+
+@dataclass
+class MoveCharacter:
+    subject:typing.Optional[Piece] = None
+    target:typing.Optional[Piece] = None
+    ep:bool = False
+    null:bool = False
+    def is_capture(self) -> bool:
+        if self.target is not None:
+            return True
+        if self.ep:
+            return True
+        return False
+
+
+
 
 @dataclass(frozen=True)
 class BasePosition:
-
-    # fields
-    arrangement:Arrangement
-    ep_column:typing.Optional[Column]
+    board:Board
+    ep_file:typing.Optional[File]
     turn:Player
+class Position(BasePosition):
 
     # method
+    #   dunder
+    def __init__(self, *,
+        board:Board=DEFAULT_BOARD,
+        ep_file:typing.Optional[File]=None,
+        turn:Player=Player.WHITE,
+    ):
+        if type(board) is not Board:
+            raise TypeError(board)
+        if ep_file is not None:
+            ep_file = File(ep_file)
+        turn = Player(turn)
+        super().__init__(
+            board=board,
+            ep_file=ep_file,
+            turn=turn,
+        )
+
+
+
 
     #   protected
     
@@ -35,153 +72,109 @@ class BasePosition:
         if type(move) is not Move:
             raise TypeError(move)
         ans = MoveCharacter()
-        ans.subject = self.arrangement[move.from_cell]
+        if move.is_null():
+            ans.null = True
+            return ans
+        ans.subject = self.board.piece(move.from_cell)
         suspects = move.suspects()
         if ans.subject not in suspects:
-            raise UnsoundMoveError
+            raise NotPseudolegalError
         if ans.subject.player != self.turn:
-            raise UnsoundMoveError
-        ans.target = self.arrangement[move.to_cell]
+            raise NotPseudolegalError
+        ans.target = self.board.piece(move.to_cell)
         if ans.target is not None:
             if ans.target.player == self.turn:
-                raise UnsoundMoveError
-        trajectory = move.trajectory()[1:]
+                raise NotPseudolegalError
+        trajectory = move.intermediates()
         for c in trajectory:
-            if self.arrangement[c] is not None:
-                raise UnsoundMoveError
+            if self.board.piece(c) is not None:
+                raise NotPseudolegalError
         if ans.subject.kind != Piece.Kind.PAWN:
             return ans
         if move.vector().digest().x:
-            if self.ep_cell() == move.to_cell:
+            if self.ep_cell == move.to_cell:
                 ans.ep = True
             elif ans.target is None:
-                raise UnsoundMoveError
+                raise NotPseudolegalError
         else:
             if ans.target is not None:
-                raise UnsoundMoveError
+                raise NotPseudolegalError
         return ans
                 
-    def _pawn_to_cells(self, 
-        pawncell:Cell,
-    ) -> typing.Generator[Cell, None, None]:
-        attacks = self.arrangement.attacks(pawncell)
-        for a in attacks:
-            if a == self.ep_cell():
-                yield a
-                continue
-            if self.arrangement[a] is None:
-                continue
-            yield a
-        walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
-        generator = pawncell.count_up(start=1, stop=3, vector=walk)
-        for n, advance in generator:
-            if self.arrangement[advance] is not None:
-                break
-            elif n == 1:
-                yield advance
-            elif pawncell.native() != self.arrangement[pawncell]:
-                break
-            elif self.arrangement[advance] is not None:
-                break
-            else:
-                yield advance
-                    
-
-
 
 
 
 
     #   public
-
-    def apply(self, move:Move):
-        cls = type(self)
-
-        moveCharacter = self._moveCharacter(move)
-        
-        # arrangement
-        arrange = dict()
-        arrange[move.from_cell] = None
-        if move.promotion is None:
-            arrange[move.to_cell] = moveCharacter.subject
+    #     conversion
+    @property
+    def fen(self) -> str:
+        parts = []
+        parts.append(self.board.fen)
+        parts.append(self.turn.fen)
+        parts.append(self.ep_fen)
+        ans = ' '.join(parts)
+        return ans
+    @classmethod
+    def by_fen(cls, value:str, /) -> typing.Self:
+        if type(value) is not str:
+            raise TypeError(value)
+        parts = value.split()
+        board = Board.by_fen(parts[0])
+        turn = Player.by_fen(parts[1])
+        ep_cell = Cell.by_fen(parts[2])
+        if ep_cell is None:
+            ep_file = None
         else:
-            arrange[move.to_cell] = Piece(
-                kind=move.promotion,
-                player=self.turn,
-            )
-        if moveCharacter.ep:
-            walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
-            ep_victim_cell = self.ep_cell().apply(-walk)
-            arrange[ep_victim_cell] = None
-        arrangement = self.arrangement.apply(arrange)
-
-        # ep_column
-        ep_column = None
-        if moveCharacter.subject.kind == Piece.Kind.PAWN:
-            if abs(move.vector()) == 2:
-                walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
-                attack_motion = consts.motions.PAWN_ATTACKS_BY_PLAYER[self.turn]
-                for attack in attack_motion:
-                    hand = walk + attack
-                    try:
-                        victimcell = move.from_cell.apply(hand)
-                    except ValueError:
-                        continue
-                    if self.arrangement[victimcell] != moveCharacter.subject.invert():
-                        continue
-                    ep_column = move.from_cell.column()
-                    break
-        
-        return cls(
-            arrangement=arrangement,
-            ep_column=ep_column,
-            turn=self.turn.invert(),
+            ep_file = ep_cell.file
+        ans = cls(
+            board=board,
+            turn=turn,
+            ep_file=ep_file,
         )
-
-    def ep_cell(self) -> typing.Optional[Cell]:
-        if self.ep_column is None:
-            return None
-        return self.ep_column.ep_cell(self.turn)
-    
+        if ans.ep_cell != ep_cell:
+            raise ValueError(value)
+        return ans
 
 
-    def is_anticheck(self) -> bool:
-        return self.arrangement.is_check(turn=self.turn.invert())
-    
-    def is_capture(self, move:Move) -> bool:
+
+
+    #     is
+    def is_capture(self, move:Move) -> bool: # pseudolegal
         return self._moveCharacter(move).is_capture()
     
-    def is_check(self) -> bool:
-        return self.arrangement.is_check(turn=self.turn)
-    
-    def is_checkmate(self) -> bool:
-        if not self.is_check():
+    def is_checkmate(self) -> bool: 
+        if not self.is_legal_check():
             return False
         return not len(self.legal_moves())
 
-    def is_en_passant(self, move:Move) -> bool:
+    def is_en_passant(self, move:Move) -> bool: # pseudolegal
         return self._moveCharacter(move).ep
+
+    def is_illegal_check(self) -> bool: # 
+        return self.board.is_check(turn=self.turn.opponent())
     
     def is_legal(self) -> bool:
-        if self.is_anticheck():
+        if self.is_illegal_check():
             return False
-        if self.ep_column in {Column.a, Column.l}:
+        if self.ep_file in {File.a, File.l}:
             return False
-        if self.ep_column is not None:
+        if self.ep_file is not None:
             walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
             attack_motion = consts.motions.PAWN_ATTACKS_BY_PLAYER[self.turn]
-            further = self.ep_cell().apply(-walk)
-            ep_victim = self.arrangement[further]
-            if ep_victim != Piece(kind=Piece.Kind.PAWN, player=self.turn.invert()):
+            further = self.ep_cell.apply(-walk)
+            ep_victim = self.board.piece(further)
+            if ep_victim != 6 * self.turn.opponent():
                 return False
             ep_attacking_cells = set()
             for attack in attack_motion:
                 ep_attacking_cells.add(further.apply(attack))
-            ep_attackers = {self.arrangement[c] for c in ep_attacking_cells}
-            if ep_victim.invert() not in ep_attackers:
+            ep_attackers = {self.board.piece(c) for c in ep_attacking_cells}
+            if ep_victim.opponent() not in ep_attackers:
                 return False
         kingthere = {player:False for player in Player}
-        for c, p in self.arrangement.items():
+        for c in Cell:
+            p = self.board.piece(c)
             if p is None:
                 continue
             if p.kind == Piece.Kind.KING:
@@ -194,80 +187,180 @@ class BasePosition:
         if not all(kingthere.values()):
             return False
         return True
+    
+    def is_legal_check(self) -> bool: # 
+        return self.board.is_check(turn=self.turn)
         
-    def is_legal_move(self, move:Move) -> bool:
-        if not self.is_sound_move(move):
+    def is_legal_move(self, move:Move) -> bool: # any
+        if move.is_null():
+            return False
+        if not self.is_pseudolegal_move(move):
             return False
         afterwards = self.apply(move)
-        ans = not afterwards.is_anticheck()
+        ans = not afterwards.is_illegal_check()
         return ans
         
-    def is_sound_move(self, move:Move) -> bool:
+    def is_pseudolegal_move(self, move:Move) -> bool: # any
         try:
             self._moveCharacter(move)
-        except UnsoundMoveError:
+        except NotPseudolegalError:
             return False
         else:
             return True
+    
+    def is_reversible(self, move:Move) -> bool: # pseudolegal
+        character = self._moveCharacter(move)
+        if character.null:
+            return True
+        if character.subject.kind == Piece.Kind.PAWN:
+            return False
+        if character.is_capture():
+            return False
+        return True
         
-    def is_stalemate(self) -> bool:
-        if self.is_check():
+    def is_stalemate(self) -> bool: # pseudolegal
+        if self.is_legal_check():
             return False
         return not len(self.legal_moves())
     
-    def is_zeroing(self, move:Move) -> bool:
-        character = self._moveCharacter(move)
-        if character.subject.kind == Piece.Kind.PAWN:
-            return True
-        if character.is_capture():
-            return True
-        return False
+    
+
+
+    #     other
+    def apply(self, move:Move): # pseudolegal
+        cls = type(self)
+
+        moveCharacter = self._moveCharacter(move)
+        if moveCharacter.null:
+            return cls(
+                board=self.board,
+                ep_file=None,
+                turn=self.turn.opponent(),
+            )
+        
+        # board
+        arrange = dict()
+        arrange[move.from_cell] = None
+        if move.promotion is None:
+            arrange[move.to_cell] = moveCharacter.subject
+        else:
+            arrange[move.to_cell] = 6 * self.turn + move.promotion
+        if moveCharacter.ep:
+            walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
+            ep_victim_cell = self.ep_cell.apply(-walk)
+            arrange[ep_victim_cell] = None
+        board = self.board.apply(arrange)
+
+        # ep_file
+        ep_file = None
+        if moveCharacter.subject.kind == Piece.Kind.PAWN:
+            if abs(move.vector()) == 2:
+                walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
+                attack_motion = consts.motions.PAWN_ATTACKS_BY_PLAYER[self.turn]
+                for attack in attack_motion:
+                    hand = walk + attack
+                    try:
+                        victimcell = move.from_cell.apply(hand)
+                    except:
+                        continue
+                    if self.board.piece(victimcell) != moveCharacter.subject.swapplayer():
+                        continue
+                    ep_file = move.from_cell.file
+                    break
+        
+        return cls(
+            board=board,
+            ep_file=ep_file,
+            turn=self.turn.opponent(),
+        )
+    
+
+
+
+    @property
+    def ep_bitBoard(self) -> BitBoard:
+        if self.ep_cell is None:
+            return BitBoard(0)
+        else:
+            return BitBoard(self.ep_cell.flag)
+    @property
+    def ep_cell(self) -> typing.Optional[Cell]:
+        if self.ep_file is None:
+            return None
+        return self.ep_file.ep_cell(self.turn)
+    @property
+    def ep_fen(self) -> str:
+        c = self.ep_cell
+        if c is None:
+            return '-'
+        else:
+            return c.fen()
     
 
 
 
     def legal_moves(self) -> typing.Set[Move]:
         ans = set()
-        for move in self.sound_moves():
+        for move in self.pseudolegal_moves():
             afterwards = self.apply(move)
-            if not afterwards.is_anticheck():
+            if not afterwards.is_illegal_check():
                 ans.add(move)
         return ans
             
+
+
+
     @classmethod
     def native(cls):
         return cls(
-            arrangement=Arrangement.native(),
-            ep_column=None,
+            board=Board.native(),
+            ep_file=None,
             turn=Player.WHITE,
         )
     
-    def replace(self, **kwargs) -> typing.Self:
-        cls = type(self)
-        dictionary = asdict(self)
-        dictionary.update(kwargs)
-        ans = cls(**dictionary)
-        return ans
 
-    def sound_moves(self) -> typing.Set[Move]:
-        ans = set()
-        for c, p in self.arrangement.items():
+
+
+    def pseudolegal_moves(self) -> typing.Set[Move]:
+        ans = {Move.null()}
+        for c in Cell:
+            p = self.board.piece(c)
             if p is None:
                 continue
             if p.player != self.turn:
                 continue
             if p.kind != Piece.Kind.PAWN:
-                to_cells = self.arrangement.attacks(c)
-                for to_cell in to_cells:
-                    move = Move(
-                        from_cell=c,
-                        to_cell=to_cell,
-                        promotion=None,
-                    )
-                    ans.add(move)
+                to_cells = self.board.attacks(c)
+                for to_cell in Cell:
+                    if to_cells & to_cell.flag:
+                        move = Move(
+                            from_cell=c,
+                            to_cell=to_cell,
+                            promotion=None,
+                        )
+                        ans.add(move)
                 continue
-            to_cells = self._pawn_to_cells(pawncell=c)
-            for to_cell in to_cells:
+
+            to_cells = 0
+            to_cells = self.board.occupied(self.turn.opponent())
+            to_cells |= self.ep_bitBoard
+            to_cells &= self.board.attacks(c)
+            occupied = self.board.occupied()
+            walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
+            generator = c.count_up(start=1, stop=3, vector=walk)
+            for n, advance in generator:
+                if occupied & advance.flag:
+                    break
+                if n == 1:
+                    to_cells |= advance.flag
+                    continue
+                elif c.native() == self.board.piece(c):
+                    to_cells |= advance.flag
+                break
+            to_cells = BitBoard(to_cells)
+            for to_cell in Cell:
+                if not (to_cell.flag & to_cells):
+                    continue
                 if not to_cell.promotion(self.turn):
                     move = Move(
                         from_cell=c,
@@ -276,25 +369,28 @@ class BasePosition:
                     )
                     ans.add(move)
                     continue
-                for promotion in Piece.Kind.promotions():
+                for p in range(1, 5):
                     move = Move(
                         from_cell=c,
                         to_cell=to_cell,
-                        promotion=promotion,
+                        promotion=Piece.Kind(p),
                     )
                     ans.add(move)
         return ans
     
+
+
+
     def termination(self):
-        if len(self.position().legal_moves()):
+        if len(self.legal_moves()):
             return None
-        if self.position().is_check():
+        if self.is_legal_check():
             kind = Termination.Kind.CHECKMATE
         else:
             kind = Termination.Kind.STALEMATE
         ans = Termination(
             kind=kind,
-            subject=self.turn.invert(),
+            subject=self.turn.opponent(),
         )
         return ans
     
@@ -304,26 +400,4 @@ class BasePosition:
 
 
 
-
-
-
-
-class Position(BasePosition):
-    def __init__(self, *,
-        arrangement:Arrangement=DEFAULT_ARRANGEMENT,
-        ep_column:typing.Optional[Column]=None,
-        turn:Player=Player.WHITE,
-    ):
-        if type(arrangement) is not Arrangement:
-            raise TypeError(arrangement)
-        if type(ep_column) is not Column:
-            if ep_column is not None:
-                raise TypeError(ep_column)
-        if type(turn) is not Player:
-            raise TypeError(turn)
-        super().__init__(
-            arrangement=arrangement,
-            ep_column=ep_column,
-            turn=turn,
-        )
 

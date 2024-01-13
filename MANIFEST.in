@@ -1,1 +1,3 @@
+include src/glinski/fonts/*
+include src/glinski/images/*
 

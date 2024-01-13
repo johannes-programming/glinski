@@ -11,17 +11,13 @@ class BaseMotion:
     # fields
     _abs: float
     _items: typing.FrozenSet[Vector]
+
+
+class Motion(BaseMotion):
     # methods
     #   dunder
     def __abs__(self):
         return self._abs
-    def __iter__(self):
-        return iter(self._items)
-    def __len__(self):
-        return len(self._items)
-
-
-class Motion(BaseMotion):
     def __init__(self, unit:Vector, *, rotate:bool) -> None:
         if type(unit) is not Vector:
             raise TypeError(unit)
@@ -40,4 +36,7 @@ class Motion(BaseMotion):
             _abs=float(abs(unit)),
             _items=frozenset(items),
         )
-
+    def __iter__(self):
+        return iter(self._items)
+    def __len__(self):
+        return len(self._items)
