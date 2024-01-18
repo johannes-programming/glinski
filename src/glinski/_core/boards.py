@@ -1,3 +1,4 @@
+# imports
 import string
 import typing
 from dataclasses import dataclass
@@ -16,7 +17,9 @@ from .players import *
 __all__ = ['Board']
 
 
-# global constants
+
+
+# global constants and associated functions
 FEN_RANKS = list(range(11, 0, -1))
 OPTIONAL_PIECES = typing.Optional[Piece]
 
@@ -44,14 +47,16 @@ PAWN_ATTACK_NEIGHBORHOODS_BY_PLAYER = {
     Player.BLACK:BLACK_PAWN_ATTACK_NEIGHBORHOODS,
 }
 
-# Board
+
+
+
+# classes
 @dataclass(frozen=True)
 class BaseBoard:
     bitBoards:typing.Tuple[BitBoard]
 class Board(BaseBoard):
     # methods
     #   dunder
-
     def __init__(self, 
         P=BitBoard(0),
         N=BitBoard(0),
@@ -75,11 +80,12 @@ class Board(BaseBoard):
                 raise ValueError
             taken |= bitBoard
         super().__init__(bitBoards=bitBoards)
-    
     def __repr__(self) -> str:
         return self.text()
     def __str__(self) -> str:
         return self.text()
+
+
 
 
     #   public
@@ -145,9 +151,12 @@ class Board(BaseBoard):
 
 
 
+
     #     is-methods
     def is_check(self, turn:Player) -> bool:
         return bool(self.checkers(turn.opponent()))
+
+
 
 
     # 
@@ -173,6 +182,7 @@ class Board(BaseBoard):
 
 
         
+
     def attackers(self, 
         cell:Cell, *,
         player:typing.Optional[Player]=None,
@@ -217,6 +227,7 @@ class Board(BaseBoard):
     
 
 
+
     def attacks(self,
         cell:Cell, *,
         piece:typing.Optional[Piece]=None,
@@ -232,19 +243,19 @@ class Board(BaseBoard):
         kind = piece.kind
         allowed = self.occupied(player).bitneg()
         
-        if kind == 0:
+        if kind == Piece.Kind.PAWN:
             pawn_attack_neighborhoods = PAWN_ATTACK_NEIGHBORHOODS_BY_PLAYER[player]
             return allowed & pawn_attack_neighborhoods[cell]
-        if kind == 1:
+        if kind == Piece.Kind.KNIGHT:
             return allowed & KNIGHT_NEIGHBORHOODS[cell]
-        if kind == 5:
+        if kind == Piece.Kind.KING:
             return allowed & KING_NEIGHBORHOODS[cell]
         
-        if kind == 2:
+        if kind == Piece.Kind.BISHOP:
             vectors = consts.motions.DIAGONAL
-        if kind == 3:
+        if kind == Piece.Kind.ROOK:
             vectors = consts.motions.LINE
-        if kind == 4:
+        if kind == Piece.Kind.QUEEN:
             vectors = set(consts.motions.DIAGONAL).union(consts.motions.LINE)
         
         occupied = self.occupied()
@@ -258,8 +269,10 @@ class Board(BaseBoard):
         return ans
     
 
+
     
     def checkers(self, player:Player) -> BitBoard: 
+        player = Player(player)
         ans = BitBoard(0)
         for c in Cell:
             p = self.piece(c)
@@ -277,16 +290,6 @@ class Board(BaseBoard):
 
 
 
-    def swapplayer(self) -> typing.Self: 
-        cls = type(self)
-        bitBoards = list(bitBoards)
-        bitBoards = bitBoards[6:] + bitBoards[:6]
-        for piece in Piece:
-            bitBoards[piece] = bitBoards[piece].swapplayer()
-        ans = cls(*bitBoards)
-        return ans
-
-
 
     @classmethod
     def native(cls) -> typing.Self: 
@@ -299,6 +302,7 @@ class Board(BaseBoard):
         ans = cls(*bitBoards)
         return ans
     
+
 
 
     def occupied(self, 
@@ -318,6 +322,7 @@ class Board(BaseBoard):
     
 
     
+
     def piece(self, 
         cell:Cell,
     ) -> Piece: 
@@ -326,6 +331,18 @@ class Board(BaseBoard):
         for ans in Piece:
             if flag & self.bitBoards[ans]:
                 return ans
+
+
+
+
+    def swapplayer(self) -> typing.Self: 
+        cls = type(self)
+        bitBoards = list(bitBoards)
+        bitBoards = bitBoards[6:] + bitBoards[:6]
+        for piece in Piece:
+            bitBoards[piece] = bitBoards[piece].swapplayer()
+        ans = cls(*bitBoards)
+        return ans
             
 
 

@@ -1,10 +1,18 @@
+# imports
 import typing
+
+from staticclasses import staticclass
 
 from .cells import Cell
 
+# __all__
 __all__ = ['cli']
 
-class cli:
+
+
+
+# class
+class cli(staticclass):
     def __init__(self) -> None:
         raise NotImplementedError
     def text(symbols:typing.Iterable[str]):

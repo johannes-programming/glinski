@@ -1,3 +1,4 @@
+# imports
 from __future__ import annotations
 
 import typing
@@ -135,7 +136,7 @@ class Cell(IntEnum):
         file = File(file)
         rank = int(rank)
         name = file.name + str(rank)
-        ans = cls(name)
+        ans = cls[name]
         return ans
 
     

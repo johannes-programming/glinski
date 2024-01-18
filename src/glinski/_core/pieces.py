@@ -1,3 +1,4 @@
+# imports
 from __future__ import annotations
 
 import typing
@@ -5,9 +6,13 @@ from enum import IntEnum
 
 from .players import *
 
+# __all__
 __all__ = ['Piece']
 
 
+
+
+# classes
 class Kind(IntEnum):
     PAWN = 0
     KNIGHT = 1

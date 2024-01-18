@@ -1,15 +1,21 @@
+# imports
 import typing
 from enum import IntEnum
 
 from .colors import *
 
+# __all__
 __all__ = ['Player']
 
+
+
+
+# class
 class Player(IntEnum):
     BLACK = 1
     WHITE = 0
 
-    # 
+    # conversion
     @property
     def fen(self) -> str:
         return self.name[0].lower()

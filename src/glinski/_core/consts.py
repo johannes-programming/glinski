@@ -1,6 +1,8 @@
+# imports
 import typing
 
 from isometric import Vector
+from staticclasses import staticclass
 
 from .bitBoards import *
 from .cells import *
@@ -8,19 +10,18 @@ from .motions import *
 from .pieces import *
 from .players import *
 
+# __all__
 __all__ = ['consts']
 
 
-class _staticclass:
-    def __new__(cls):
-        raise NotImplementedError
 
 
-class consts(_staticclass):
+# classes
+class consts(staticclass):
     pass
     
 
-class motions(_staticclass):
+class motions(staticclass):
     HORSE = Motion(Vector(y=-1, z=2), rotate=True)
     LINE = Motion(Vector(z=1), rotate=True)
     DIAGONAL = Motion(Vector(y=-1, z=1), rotate=True)
@@ -35,14 +36,14 @@ class motions(_staticclass):
 consts.motions = motions
 
 
-class vectors(_staticclass):
+class vectors(staticclass):
     pass
 vectors.PAWN_WALKS_BY_PLAYER = dict()
 for player, motion in consts.motions.PAWN_WALKS_BY_PLAYER.items():
     vectors.PAWN_WALKS_BY_PLAYER[player], = motion
 consts.vectors = vectors
 
-class bitBoards(_staticclass):
+class bitBoards(staticclass):
     pass
 bitBoards.promotions = dict()
 for player in Player:

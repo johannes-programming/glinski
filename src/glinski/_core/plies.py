@@ -1,3 +1,4 @@
+# imports
 import string
 import typing
 from dataclasses import dataclass
@@ -8,18 +9,21 @@ from .cells import *
 from .pieces import *
 from .players import *
 
-__all__ = ['Move']
+# __all__
+__all__ = ['Ply']
 
 
 
 
+# classes
 @dataclass(frozen=True)
-class BaseMove:
+class BasePly:
     # fields
     from_cell:Cell
     to_cell:Cell
     promotion:typing.Optional[Piece.Kind]
-class Move(BaseMove):
+    
+class Ply(BasePly):
     # methods
     #   dunder
     def __abs__(self):
@@ -105,8 +109,8 @@ class Move(BaseMove):
     @classmethod
     def null(cls):
         return cls(
-            from_cell=Cell.a1,
-            to_cell=Cell.a1,
+            from_cell=0,
+            to_cell=0,
             promotion=None,
         )
     def suspects(self) -> typing.Set[Piece]:

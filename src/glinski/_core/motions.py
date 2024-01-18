@@ -1,18 +1,21 @@
+# imports
 import typing
 from dataclasses import dataclass
 
 from isometric import Vector
 
+# __all__
 __all__ = ['Motion']
 
 
+
+
+# classes
 @dataclass(frozen=True)
 class BaseMotion:
     # fields
     _abs: float
     _items: typing.FrozenSet[Vector]
-
-
 class Motion(BaseMotion):
     # methods
     #   dunder

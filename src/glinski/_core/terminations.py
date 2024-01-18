@@ -1,20 +1,24 @@
+# imports
 from __future__ import annotations
 
-import typing
 from dataclasses import dataclass
 from enum import Enum
 
 from .outcomes import *
 from .players import *
 
+# __all__
 __all__ = ['Termination']
 
+
+
+
+# classes
 @dataclass(frozen=True)
 class BaseTermination:
     kind:Termination.Kind
     subject:Player
     outcome:Outcome
-
 class Termination(BaseTermination):
     class Kind(Enum):
         CHECKMATE = 1
@@ -43,13 +47,11 @@ class Termination(BaseTermination):
             raise TypeError(kind)
         if type(subject) is not Player:
             raise TypeError(subject)
-
         if subject == Player.WHITE:
             white = kind.for_subject()
         else:
             white = kind.for_opponent()
         outcome = Outcome.by_items(white=white)
-
         super().__init__(
             kind=kind,
             outcome=outcome,

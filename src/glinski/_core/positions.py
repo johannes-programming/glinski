@@ -1,3 +1,4 @@
+# imports
 from __future__ import annotations
 
 import typing
@@ -8,22 +9,26 @@ from .boards import *
 from .cells import *
 from .consts import *
 from .errors import *
-from .moves import *
 from .pieces import *
 from .players import *
+from .plies import *
 from .terminations import *
 
+# __all__
 __all__ = ['Position']
 
 
 
+
+# global constants
 DEFAULT_BOARD = Board()
 
 
 
 
+# classes
 @dataclass
-class MoveCharacter:
+class PlyCharacter:
     subject:typing.Optional[Piece] = None
     target:typing.Optional[Piece] = None
     ep:bool = False
@@ -68,31 +73,31 @@ class Position(BasePosition):
 
     #   protected
     
-    def _moveCharacter(self, move:Move) -> MoveCharacter:
-        if type(move) is not Move:
-            raise TypeError(move)
-        ans = MoveCharacter()
-        if move.is_null():
+    def _plyCharacter(self, ply:Ply) -> PlyCharacter:
+        if type(ply) is not Ply:
+            raise TypeError(ply)
+        ans = PlyCharacter()
+        if ply.is_null():
             ans.null = True
             return ans
-        ans.subject = self.board.piece(move.from_cell)
-        suspects = move.suspects()
+        ans.subject = self.board.piece(ply.from_cell)
+        suspects = ply.suspects()
         if ans.subject not in suspects:
             raise NotPseudolegalError
         if ans.subject.player != self.turn:
             raise NotPseudolegalError
-        ans.target = self.board.piece(move.to_cell)
+        ans.target = self.board.piece(ply.to_cell)
         if ans.target is not None:
             if ans.target.player == self.turn:
                 raise NotPseudolegalError
-        trajectory = move.intermediates()
+        trajectory = ply.intermediates()
         for c in trajectory:
             if self.board.piece(c) is not None:
                 raise NotPseudolegalError
         if ans.subject.kind != Piece.Kind.PAWN:
             return ans
-        if move.vector().digest().x:
-            if self.ep_cell == move.to_cell:
+        if ply.vector().digest().x:
+            if self.ep_cell == ply.to_cell:
                 ans.ep = True
             elif ans.target is None:
                 raise NotPseudolegalError
@@ -140,16 +145,16 @@ class Position(BasePosition):
 
 
     #     is
-    def is_capture(self, move:Move) -> bool: # pseudolegal
-        return self._moveCharacter(move).is_capture()
+    def is_capture(self, ply:Ply) -> bool: # pseudolegal
+        return self._plyCharacter(ply).is_capture()
     
     def is_checkmate(self) -> bool: 
         if not self.is_legal_check():
             return False
-        return not len(self.legal_moves())
+        return not len(self.legal_plies())
 
-    def is_en_passant(self, move:Move) -> bool: # pseudolegal
-        return self._moveCharacter(move).ep
+    def is_en_passant(self, ply:Ply) -> bool: # pseudolegal
+        return self._plyCharacter(ply).ep
 
     def is_illegal_check(self) -> bool: # 
         return self.board.is_check(turn=self.turn.opponent())
@@ -191,25 +196,25 @@ class Position(BasePosition):
     def is_legal_check(self) -> bool: # 
         return self.board.is_check(turn=self.turn)
         
-    def is_legal_move(self, move:Move) -> bool: # any
-        if move.is_null():
+    def is_legal_ply(self, ply:Ply) -> bool: # any
+        if ply.is_null():
             return False
-        if not self.is_pseudolegal_move(move):
+        if not self.is_pseudolegal_ply(ply):
             return False
-        afterwards = self.apply(move)
+        afterwards = self.apply(ply)
         ans = not afterwards.is_illegal_check()
         return ans
         
-    def is_pseudolegal_move(self, move:Move) -> bool: # any
+    def is_pseudolegal_ply(self, ply:Ply) -> bool: # any
         try:
-            self._moveCharacter(move)
+            self._plyCharacter(ply)
         except NotPseudolegalError:
             return False
         else:
             return True
     
-    def is_reversible(self, move:Move) -> bool: # pseudolegal
-        character = self._moveCharacter(move)
+    def is_reversible(self, ply:Ply) -> bool: # pseudolegal
+        character = self._plyCharacter(ply)
         if character.null:
             return True
         if character.subject.kind == Piece.Kind.PAWN:
@@ -221,17 +226,17 @@ class Position(BasePosition):
     def is_stalemate(self) -> bool: # pseudolegal
         if self.is_legal_check():
             return False
-        return not len(self.legal_moves())
+        return not len(self.legal_plies())
     
     
 
 
     #     other
-    def apply(self, move:Move): # pseudolegal
+    def apply(self, ply:Ply): # pseudolegal
         cls = type(self)
 
-        moveCharacter = self._moveCharacter(move)
-        if moveCharacter.null:
+        plyCharacter = self._plyCharacter(ply)
+        if plyCharacter.null:
             return cls(
                 board=self.board,
                 ep_file=None,
@@ -240,12 +245,12 @@ class Position(BasePosition):
         
         # board
         arrange = dict()
-        arrange[move.from_cell] = None
-        if move.promotion is None:
-            arrange[move.to_cell] = moveCharacter.subject
+        arrange[ply.from_cell] = None
+        if ply.promotion is None:
+            arrange[ply.to_cell] = plyCharacter.subject
         else:
-            arrange[move.to_cell] = 6 * self.turn + move.promotion
-        if moveCharacter.ep:
+            arrange[ply.to_cell] = 6 * self.turn + ply.promotion
+        if plyCharacter.ep:
             walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
             ep_victim_cell = self.ep_cell.apply(-walk)
             arrange[ep_victim_cell] = None
@@ -253,19 +258,19 @@ class Position(BasePosition):
 
         # ep_file
         ep_file = None
-        if moveCharacter.subject.kind == Piece.Kind.PAWN:
-            if abs(move.vector()) == 2:
+        if plyCharacter.subject.kind == Piece.Kind.PAWN:
+            if abs(ply.vector()) == 2:
                 walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
                 attack_motion = consts.motions.PAWN_ATTACKS_BY_PLAYER[self.turn]
                 for attack in attack_motion:
                     hand = walk + attack
                     try:
-                        victimcell = move.from_cell.apply(hand)
+                        victimcell = ply.from_cell.apply(hand)
                     except:
                         continue
-                    if self.board.piece(victimcell) != moveCharacter.subject.swapplayer():
+                    if self.board.piece(victimcell) != plyCharacter.subject.swapplayer():
                         continue
-                    ep_file = move.from_cell.file
+                    ep_file = ply.from_cell.file
                     break
         
         return cls(
@@ -299,12 +304,12 @@ class Position(BasePosition):
 
 
 
-    def legal_moves(self) -> typing.Set[Move]:
+    def legal_plies(self) -> typing.Set[Ply]:
         ans = set()
-        for move in self.pseudolegal_moves():
-            afterwards = self.apply(move)
+        for ply in self.pseudolegal_plies():
+            afterwards = self.apply(ply)
             if not afterwards.is_illegal_check():
-                ans.add(move)
+                ans.add(ply)
         return ans
             
 
@@ -321,8 +326,8 @@ class Position(BasePosition):
 
 
 
-    def pseudolegal_moves(self) -> typing.Set[Move]:
-        ans = {Move.null()}
+    def pseudolegal_plies(self) -> typing.Set[Ply]:
+        ans = {Ply.null()}
         for c in Cell:
             p = self.board.piece(c)
             if p is None:
@@ -333,12 +338,12 @@ class Position(BasePosition):
                 to_cells = self.board.attacks(c)
                 for to_cell in Cell:
                     if to_cells & to_cell.flag:
-                        move = Move(
+                        ply = Ply(
                             from_cell=c,
                             to_cell=to_cell,
                             promotion=None,
                         )
-                        ans.add(move)
+                        ans.add(ply)
                 continue
 
             to_cells = 0
@@ -362,27 +367,27 @@ class Position(BasePosition):
                 if not (to_cell.flag & to_cells):
                     continue
                 if not to_cell.promotion(self.turn):
-                    move = Move(
+                    ply = Ply(
                         from_cell=c,
                         to_cell=to_cell,
                         promotion=None,
                     )
-                    ans.add(move)
+                    ans.add(ply)
                     continue
                 for p in range(1, 5):
-                    move = Move(
+                    ply = Ply(
                         from_cell=c,
                         to_cell=to_cell,
                         promotion=Piece.Kind(p),
                     )
-                    ans.add(move)
+                    ans.add(ply)
         return ans
     
 
 
 
     def termination(self):
-        if len(self.legal_moves()):
+        if len(self.legal_plies()):
             return None
         if self.is_legal_check():
             kind = Termination.Kind.CHECKMATE

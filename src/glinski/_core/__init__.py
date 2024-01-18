@@ -2,10 +2,10 @@ from .boards import *
 from .cells import *
 from .colors import *
 from .errors import *
-from .moves import *
 from .outcomes import *
 from .pieces import *
 from .players import *
+from .plies import *
 from .positions import *
 from .seqs import *
 from .terminations import *

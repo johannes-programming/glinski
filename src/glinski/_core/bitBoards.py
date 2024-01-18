@@ -1,3 +1,4 @@
+# imports
 import typing
 from enum import IntFlag
 
@@ -7,13 +8,22 @@ from .cli import *
 # __all__
 __all__ = ['BitBoard']
 
+
+
+
+# constants
 CENTER_FLAG = 1 << 45
 LOWER_MASK = CENTER_FLAG - 1
 UPPER_MASK = LOWER_MASK << 46
 
-class BitBoard(IntFlag):
 
-    # cells
+
+
+# class
+class BitBoard(IntFlag):
+    # methods
+    #   public
+    #     conversion
     def cells(self) -> typing.Set[Cell]:
         ans = set()
         for cell in Cell:
@@ -21,17 +31,14 @@ class BitBoard(IntFlag):
                 ans.add(cell)
         return ans
     @classmethod
-    def by_cells(cls, *cells) -> typing.Self:
+    def by_cells(cls, cells:typing.Iterable[Cell]) -> typing.Self:
+        cells = list(cells)
         ans = 0
         for c in cells:
             ans |= Cell(c).flag
         ans = cls(ans)
         return ans
-    
-
-    
-    # methods
-    #   public
+    #     others
     def bitneg(self) -> typing.Self:
         cls = type(self)
         ans = 0
@@ -40,7 +47,6 @@ class BitBoard(IntFlag):
                 ans |= cell.flag
         ans = cls(ans)
         return ans
-
     def swapplayer(self) -> typing.Self:
         cls = type(self)
         upper = self & UPPER_MASK
@@ -52,7 +58,6 @@ class BitBoard(IntFlag):
         ans |= (lower << 46)
         ans = cls(ans)
         return ans
-    
     def text(self) -> str:
         symbols = ['.'] * 91
         for cell in Cell:

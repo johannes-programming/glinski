@@ -1,10 +1,15 @@
+# imports
 from enum import Enum
 
 from .players import *
 
+# __all__
 __all__ = ['Outcome']
 
 
+
+
+# class
 class Outcome(Enum):
     FULL_WIN_FOR_BLACK = (0.00, 1.00)
     HALF_WIN_FOR_BLACK = (0.25, 0.75)
@@ -27,19 +32,21 @@ class Outcome(Enum):
                 return cls((white, 1 - white))
             else:
                 return cls((white, black))
-    def for_white(self):
-        return self.value[0]
-    def for_black(self):
-        return self.value[1]
-    def invert(self):
+    def for_player(self, player:Player) -> float:
+        player = Player(player)
+        if player == Player.BLACK:
+            return self.value[1]
+        else:
+            return self.value[0]
+    def swapplayer(self):
         cls = type(self)
         value = self.value[::-1]
         ans = cls(value)
         return ans
     def to_dict(self):
         return {
-            Player.WHITE:self.for_white(),
-            Player.BLACK:self.for_black(),
+            p:self.for_player(p)
+            for p in Player
         }
     
 
