@@ -38,16 +38,16 @@ class Outcome(Enum):
             return self.value[1]
         else:
             return self.value[0]
-    def swapplayer(self):
-        cls = type(self)
-        value = self.value[::-1]
-        ans = cls(value)
-        return ans
     def to_dict(self):
         return {
             p:self.for_player(p)
             for p in Player
         }
+    def turntable(self):
+        cls = type(self)
+        value = self.value[::-1]
+        ans = cls(value)
+        return ans
     
 
 

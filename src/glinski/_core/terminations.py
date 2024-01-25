@@ -57,6 +57,13 @@ class Termination(BaseTermination):
             outcome=outcome,
             subject=subject,
         )
+    def turntable(self):
+        cls = type(self)
+        ans = cls(
+            subject=self.subject.turntable(),
+            kind=self.kind,
+        )
+        return ans
         
         
 

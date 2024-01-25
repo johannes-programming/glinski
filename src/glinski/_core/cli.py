@@ -3,7 +3,7 @@ import typing
 
 from staticclasses import staticclass
 
-from .cells import Cell
+from .cells_and_files import *
 
 # __all__
 __all__ = ['cli']

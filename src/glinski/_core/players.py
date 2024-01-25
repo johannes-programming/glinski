@@ -2,7 +2,7 @@
 import typing
 from enum import IntEnum
 
-from .colors import *
+from .strangeFuncs import *
 
 # __all__
 __all__ = ['Player']
@@ -12,8 +12,22 @@ __all__ = ['Player']
 
 # class
 class Player(IntEnum):
-    BLACK = 1
+
+    #fields
     WHITE = 0
+    BLACK = 1
+
+
+
+    @classmethod
+    def _setup(cls):
+        cls.__new__ = strangeFuncs.IntModNew(
+            cls.__new__,
+            modulus=2,
+        )
+        cls.__invert__ = cls.turntable
+
+
 
     # conversion
     @property
@@ -24,16 +38,16 @@ class Player(IntEnum):
         if type(value) is not str:
             raise TypeError(value)
         for item in cls:
-            if item.fen() == value:
+            if item.fen == value:
                 return item
         raise ValueError(value)
     
-    # 
-    @property
-    def color(self) -> Color:
-        return Color[self.name]
-    def opponent(self) -> typing.Self:
+
+    # others
+    def turntable(self) -> typing.Self:
         cls = type(self)
         value = 1 - self.value
         ans = cls(value)
         return ans
+
+Player._setup()

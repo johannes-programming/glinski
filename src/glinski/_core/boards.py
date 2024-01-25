@@ -1,17 +1,18 @@
 # imports
-import string
+from string import digits
 import typing
 from dataclasses import dataclass
 
 from isometric import Vector
 
 from .bitBoards import *
-from .cells import *
+from .cells_and_files import *
 from .cli import *
 from .consts import *
 from .errors import *
 from .pieces import *
 from .players import *
+from .strangeFuncs import *
 
 # __all__
 __all__ = ['Board']
@@ -19,177 +20,230 @@ __all__ = ['Board']
 
 
 
-# global constants and associated functions
-FEN_RANKS = list(range(11, 0, -1))
-OPTIONAL_PIECES = typing.Optional[Piece]
-
-def neighborhoods(vectors:typing.Iterable[Vector]):
-    ans = [BitBoard(0)] * 91
-    for cell in Cell:
-        search = cell.search(vectors)
-        for s in search:
-            ans[cell] |= s.flag
-    ans = tuple(ans)
-    return ans
-KNIGHT_NEIGHBORHOODS = neighborhoods(consts.motions.HORSE)
-KING_NEIGHBORHOODS = neighborhoods(
-    list(consts.motions.LINE)
-    + list(consts.motions.DIAGONAL)
-)
-WHITE_PAWN_ATTACK_NEIGHBORHOODS = neighborhoods(
-    consts.motions.PAWN_ATTACKS_BY_PLAYER[Player.WHITE]
-)
-BLACK_PAWN_ATTACK_NEIGHBORHOODS = neighborhoods(
-    consts.motions.PAWN_ATTACKS_BY_PLAYER[Player.BLACK]
-)
-PAWN_ATTACK_NEIGHBORHOODS_BY_PLAYER = {
-    Player.WHITE:WHITE_PAWN_ATTACK_NEIGHBORHOODS,
-    Player.BLACK:BLACK_PAWN_ATTACK_NEIGHBORHOODS,
-}
-
-
-
-
 # classes
-@dataclass(frozen=True)
-class BaseBoard:
-    bitBoards:typing.Tuple[BitBoard]
-class Board(BaseBoard):
-    # methods
-    #   dunder
-    def __init__(self, 
-        P=BitBoard(0),
-        N=BitBoard(0),
-        B=BitBoard(0),
-        R=BitBoard(0),
-        Q=BitBoard(0),
-        K=BitBoard(0),
-        p=BitBoard(0),
-        n=BitBoard(0),
-        b=BitBoard(0),
-        r=BitBoard(0),
-        q=BitBoard(0),
-        k=BitBoard(0),
-    ):
-        bitBoards = [P, N, B, R, Q, K, p, n, b, r, q, k]
-        bitBoards = [BitBoard(x) for x in bitBoards]
-        bitBoards = tuple(bitBoards)
-        taken = BitBoard(0)
-        for bitBoard in bitBoards:
-            if taken & bitBoard:
-                raise ValueError
-            taken |= bitBoard
-        super().__init__(bitBoards=bitBoards)
+class Board:
+    # dunder
+    def __bool__(self):
+        return any(self._bitBoards)
+    def __eq__(self, other) -> bool:
+        cls = type(self)
+        if type(other) is not cls:
+            return False
+        return self._bitBoards == other._bitBoards
+    def __init__(self, *args, **kwargs):
+        if 'fen' in kwargs.keys():
+            version = self.__init_fen
+        elif len(args) != 1:
+            version = self.__init_bitBoards
+        elif issubclass(type(args[0]), int):
+            version = self.__init_bitBoards
+        else:
+            version = self.__init_fen
+        version(*args, **kwargs)
+        self._fen = self.__fen()
+    def __ne__(self, other):
+        return not self.__eq__(other)
     def __repr__(self) -> str:
         return self.text()
     def __str__(self) -> str:
-        return self.text()
+        return self.fen
 
 
 
 
-    #   public
-    #     conversion
-    #       fen
-    @property
-    def fen(self) -> str:
+
+    #
+    def __envs(vectors:typing.Iterable[Vector]):
+        ans = [BitBoard(0)] * 91
+        for cell in Cell:
+            search = cell.search(vectors)
+            for s in search:
+                ans[cell] |= s.flag
+        ans = tuple(ans)
+        return ans
+    def __fen(self) -> str:
+        cls = type(self)
         ans = ""
-        for rank in FEN_RANKS:
+        for cells in cls._RANKS:
             empty = 0
-            for f in range(11):
-                file = File(f)
-                if rank > file.height():
-                    continue
-                cell = Cell[file.name + str(rank)]
+            for cell in cells:
                 piece = self.piece(cell)
                 if piece is None:
                     empty += 1
                     continue
-                if empty > 0:
+                if empty:
                     ans += str(empty)
                     empty = 0
-                ans += piece.fen()
-            if empty > 0:
+                ans += piece.fen
+            if empty:
                 ans += str(empty)
             ans += '/'
         ans = ans[:-1]
         return ans
-    @classmethod
-    def by_fen(cls, value:str) -> typing.Self:
-        if type(value) is not str:
-            raise TypeError(value)
-        ans = 0
-        parts = value.split('/')
-        pieces = [None] * 91
-        for rank, part in zip(FEN_RANKS, parts):
-            empty = 0
-            s = part
-            for f in range(11):
-                file = File(f)
-                if file.height() < rank:
-                    continue
-                cell = Cell[file.name + str(rank)]
-                j = 0
-                while (j < len(s))and(s[j] in string.digits):
-                    j += 1
-                empty += int('0' + s[:j])
-                s = s[j:]
-                if empty > 0:
-                    empty -= 1
-                    continue
-                pieces[cell] = Piece.by_fen(s[0])
-                s = s[1:]
-            if empty or s:
-                raise ValueError(value)
-        bitBoards = [BitBoard(0)] * 12
+    def __init_bitBoards(self, 
+        P:BitBoard=0, N:BitBoard=0, B:BitBoard=0, 
+        R:BitBoard=0, Q:BitBoard=0, K:BitBoard=0, 
+        p:BitBoard=0, n:BitBoard=0, b:BitBoard=0, 
+        r:BitBoard=0, q:BitBoard=0, k:BitBoard=0,
+    ):
+        self._bitBoards = [
+            P, N, B, R, Q, K,
+            p, n, b, r, q, k,
+        ]
+        self._bitBoards = [BitBoard(x) for x in self._bitBoards]
+        taken = BitBoard(0)
+        for bitBoard in self._bitBoards:
+            if taken & bitBoard:
+                raise ValueError
+            taken |= bitBoard
+    def __init_fen(self, fen:str):
+        cls = type(self)
+        fen = str(fen)
+        boardpieces = [""] * 91
+        parts = fen.split('/')
+        if len(parts) != 11:
+            raise ValueError(fen)
+        for part, cells in zip(parts, cls._RANKS):
+            rankpieces = self.__parse_rank_fen(part)
+            if len(rankpieces) != len(cells):
+                raise ValueError(fen)
+            for piece, cell in zip(rankpieces, cells):
+                boardpieces[cell] = piece
+        self._bitBoards = [BitBoard(0)] * 12
         for cell in Cell:
-            if pieces[cell] is None:
+            piece = boardpieces[cell]
+            if piece is None:
                 continue
-            bitBoards[pieces[cell]] |= cell.flag
-        ans = cls(bitBoards)
+            self._bitBoards[piece] |= cell.flag
+    @classmethod
+    def __find_first_piece(cls, string):
+        for i, s in enumerate(string):
+            if s not in digits:# do not change!
+                return i
+        return len(string)
+    @classmethod
+    def __parse_rank_fen(cls, string):
+        ans = list()
+        while string:
+            i = cls.__find_first_piece(string)
+            if i:
+                j = int(string[:i])
+                ans += [None] * j
+                string = string[i:]
+                continue
+            ans.append(Piece.by_fen(string[0]))
+            string = string[1:]
         return ans
 
 
 
 
-    #     is-methods
+
+
+    # 
+
+
+    @classmethod
+    def _setup(cls):
+        # fen ranks
+        cls._RANKS = list()
+        for rank in range(11, 0, -1):
+            ranklist = list()
+            for f in range(11):
+                file = File(f)
+                if len(file) < rank:
+                    continue
+                cell = file[rank]
+                ranklist.append(cell)
+            cls._RANKS.append(ranklist)
+        # pawn bans
+        ranks = [1, 8, 9, 10, 11]
+        cells = {c for c in Cell if (c.rank in ranks)}
+        bb = BitBoard.by_cells(cells)
+        cls._PAWN_BAN_BY_PLAYER = dict()
+        cls._PAWN_BAN_BY_PLAYER[Player.BLACK] = bb
+        cls._PAWN_BAN_BY_PLAYER[Player.WHITE] = bb.turntable()
+        # non sliding environments
+        cls._KNIGHT_ENV = cls.__envs(consts.motions.HORSE)
+        cls._KING_ENV = cls.__envs(
+            list(consts.motions.LINE)
+            + list(consts.motions.DIAGONAL)
+        )
+        cls._PAWN_ENV_BY_PLAYER = dict()
+        for player in Player:
+            cls._PAWN_ENV_BY_PLAYER[player] = cls.__envs(
+                consts.motions.PAWN_ATTACKS_BY_PLAYER[player]
+            )
+            
+        change = {c:c.native() for c in Cell}
+        cls._NATIVE = cls(0).apply(change)
+
+
+
+
+    # conversion
+    @property
+    def fen(self) -> str:
+        return self._fen
+    @classmethod
+    def by_fen(cls, value:str, /) -> typing.Self:
+        return cls(fen=value)
+
+
+
+
+    # to be or not to be
     def is_check(self, turn:Player) -> bool:
-        return bool(self.checkers(turn.opponent()))
+        return bool(self.checkers(turn.turntable()))
+    @property
+    def is_illegal_king(self) -> bool:
+        for king in [Piece.k, Piece.K]:
+            bitBoard = self.bitBoard(king)
+            if all((c.flag != bitBoard) for c in Cell):
+                return True
+        return False
+    @property
+    def is_illegal_pawn(self) -> bool:
+        cls = type(self)
+        for player in Player:
+            pawn = player * 6
+            if self.bitBoard(pawn) & cls._PAWN_BAN_BY_PLAYER[player]:
+                return True
+        return False
 
 
 
 
     # 
     
-    def apply(self, dictionary) -> typing.Self:
+    def apply(self, change) -> typing.Self:
         cls = type(self)
-        dictionary = dict(dictionary)
-        dictionary = {Cell(k):v for k, v in dictionary.items()}
-        bitBoards = list(self.bitBoards)
-        applymask = BitBoard(0)
-        for c in dictionary.keys():
-            applymask |= c.flag
-        nonemask = applymask.bitneg()
-        for i in range(12):
-            bitBoards[i] &= nonemask
-        for c, p in dictionary.items():
-            if p is None:
-                continue
-            piece = Piece(p)
-            bitBoards[piece] |= BitBoard(c.flag)
+        change = dict(change)
+        change = {Cell(k):v for k, v in change.items()}
+        changemask = BitBoard.by_cells(change.keys())
+        keepmask = ~changemask
+        bitBoards = list()
+        for piece in range(12):
+            bitBoard = self.bitBoard(piece)
+            bitBoard &= keepmask
+            bitBoards.append(bitBoard)
+        for cell, piece in change.items():
+            if piece is not None:
+                bitBoards[piece] |= cell.flag
         ans = cls(*bitBoards)
         return ans
 
 
-        
+
 
     def attackers(self, 
         cell:Cell, *,
         player:typing.Optional[Player]=None,
     ) -> BitBoard:
+        cls = type(self)
         cell = Cell(cell)
         if player is None:
-            player = self.piece(cell).player.opponent()
+            player = self.piece(cell).player.turntable()
         elif type(player) is not Player:
             raise TypeError(player)
 
@@ -202,13 +256,13 @@ class Board(BaseBoard):
         queen = player * 6 + 4
         king = player * 6 + 5
 
-        pawn_neighborhoods = PAWN_ATTACK_NEIGHBORHOODS_BY_PLAYER[player.opponent()]
-        ans |= self.bitBoards[pawn] & pawn_neighborhoods[cell]
-        ans |= self.bitBoards[knight] & KNIGHT_NEIGHBORHOODS[cell]
-        ans |= self.bitBoards[king] & KING_NEIGHBORHOODS[cell]
+        pawn_envs = cls._PAWN_ENV_BY_PLAYER[player.turntable()]
+        ans |= self.bitBoard(pawn) & pawn_envs[cell]
+        ans |= self.bitBoard(knight) & cls._KNIGHT_ENV[cell]
+        ans |= self.bitBoard(king) & cls._KING_ENV[cell]
         
-        diagonal_danger = self.bitBoards[bishop] | self.bitBoards[queen]
-        line_danger = self.bitBoards[rook] | self.bitBoards[queen]
+        diagonal_danger = self.bitBoard(bishop) | self.bitBoard(queen)
+        line_danger = self.bitBoard(rook) | self.bitBoard(queen)
         modes = (
             (diagonal_danger, consts.motions.DIAGONAL),
             (line_danger, consts.motions.LINE),
@@ -232,6 +286,7 @@ class Board(BaseBoard):
         cell:Cell, *,
         piece:typing.Optional[Piece]=None,
     ) -> BitBoard:
+        cls = type(self)
         cell = Cell(cell)
         if piece is None:
             piece = self.piece(cell)
@@ -241,15 +296,15 @@ class Board(BaseBoard):
             return BitBoard(0)
         player = piece.player
         kind = piece.kind
-        allowed = self.occupied(player).bitneg()
+        allowed = ~self.occupied(player)
         
         if kind == Piece.Kind.PAWN:
-            pawn_attack_neighborhoods = PAWN_ATTACK_NEIGHBORHOODS_BY_PLAYER[player]
-            return allowed & pawn_attack_neighborhoods[cell]
+            envs = cls._PAWN_ENV_BY_PLAYER[player]
+            return allowed & envs[cell]
         if kind == Piece.Kind.KNIGHT:
-            return allowed & KNIGHT_NEIGHBORHOODS[cell]
+            return allowed & cls._KNIGHT_ENV[cell]
         if kind == Piece.Kind.KING:
-            return allowed & KING_NEIGHBORHOODS[cell]
+            return allowed & cls._KING_ENV[cell]
         
         if kind == Piece.Kind.BISHOP:
             vectors = consts.motions.DIAGONAL
@@ -259,7 +314,7 @@ class Board(BaseBoard):
             vectors = set(consts.motions.DIAGONAL).union(consts.motions.LINE)
         
         occupied = self.occupied()
-        ans = BitBoard(0)
+        ans = BitBoard()
         for v in vectors:
             for possible in cell.slide(v):
                 if possible.flag & allowed:
@@ -271,6 +326,14 @@ class Board(BaseBoard):
 
 
     
+    def bitBoard(self, piece:Piece):
+        piece = Piece(piece)
+        ans = self._bitBoards[piece]
+        return ans
+    
+
+
+
     def checkers(self, player:Player) -> BitBoard: 
         player = Player(player)
         ans = BitBoard(0)
@@ -293,14 +356,7 @@ class Board(BaseBoard):
 
     @classmethod
     def native(cls) -> typing.Self: 
-        bitBoards = [BitBoard(0)] * 12
-        for cell in Cell:
-            piece = cell.native()
-            if piece is None:
-                continue
-            bitBoards[piece] |= cell.flag
-        ans = cls(*bitBoards)
-        return ans
+        return cls._NATIVE
     
 
 
@@ -317,7 +373,7 @@ class Board(BaseBoard):
             b = 6 * (player + 1)
         ans = BitBoard(0)
         for i in range(a, b):
-            ans |= self.bitBoards[i]
+            ans |= self.bitBoard(i)
         return ans
     
 
@@ -329,20 +385,9 @@ class Board(BaseBoard):
         cell = Cell(cell)
         flag = cell.flag
         for ans in Piece:
-            if flag & self.bitBoards[ans]:
+            if flag & self.bitBoard(ans):
                 return ans
-
-
-
-
-    def swapplayer(self) -> typing.Self: 
-        cls = type(self)
-        bitBoards = list(bitBoards)
-        bitBoards = bitBoards[6:] + bitBoards[:6]
-        for piece in Piece:
-            bitBoards[piece] = bitBoards[piece].swapplayer()
-        ans = cls(*bitBoards)
-        return ans
+        return None
             
 
 
@@ -359,3 +404,17 @@ class Board(BaseBoard):
 
 
 
+    def turntable(self) -> typing.Self: 
+        cls = type(self)
+        bitBoards = [None] * 12
+        for piece in Piece:
+            bitBoards[piece] = self.bitBoard(
+                piece.turntable()
+            ).turntable()
+        ans = cls(*bitBoards)
+        return ans
+
+
+
+
+Board._setup()

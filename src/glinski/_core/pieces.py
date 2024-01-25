@@ -21,44 +21,54 @@ class Kind(IntEnum):
     QUEEN = 4
     KING = 5
 
-    # algebraic
+    #
+    @classmethod
+    def _setup(cls):
+        #
+        cls.PAWN._ALGEBRAIC = ''
+        cls.KNIGHT._ALGEBRAIC = 'N'
+        cls.BISHOP._ALGEBRAIC = 'B'
+        cls.ROOK._ALGEBRAIC = 'R'
+        cls.QUEEN._ALGEBRAIC = 'Q'
+        cls.KING._ALGEBRAIC = 'K'
+        #
+        cls.PAWN._UCI = None
+        cls.KNIGHT._UCI = 'n'
+        cls.BISHOP._UCI = 'b'
+        cls.ROOK._UCI = 'r'
+        cls.QUEEN._UCI = 'q'
+        cls.KING._UCI = None
+
+    # conversion
     @property
     def algebraic(self):
-        cls = type(self)
-        ans = {
-            cls.PAWN:'',
-            cls.KNIGHT:'N',
-            cls.BISHOP:'B',
-            cls.ROOK:'R',
-            cls.QUEEN:'Q',
-            cls.KING:'K',
-        }[self]
-        return ans
+        return self._ALGEBRAIC
     @classmethod
     def by_algebraic(cls, value, /):
         for x in cls:
             if x.algebraic == value:
                 return x
         raise ValueError(value)
-    
-    # uci
     @property
-    def uci(self) -> typing.Optional[str]:
-        ans = self.algebraic.lower()
-        if ans in {'', 'k'}:
-            ans = None
-        return ans
+    def uci(self) -> str:
+        ans = self._UCI
+        if ans is None:
+            raise ValueError(self)
+        else:
+            return ans
     @classmethod
-    def by_uci(cls, value:str, /) -> typing.Self:
+    def by_uci(cls, value:str, /, allow_empty=False) -> typing.Self:
         v = str(value)
-        for k in cls:
-            if v == k.uci:
-                return k
+        if allow_empty and (v == ""):
+            return None
+        for x in cls:
+            if x.uci == v:
+                return x
         raise ValueError(value)
 
     # properties
     @property
-    def sliding(self) -> bool:
+    def is_sliding(self) -> bool:
         return 2 <= self <= 4
     
 
@@ -66,22 +76,18 @@ class Kind(IntEnum):
 
 
 class Piece(IntEnum):
-
     # fields
-    P = 0
-    N = 1
-    B = 2
-    R = 3
-    Q = 4
-    K = 5
-    p = 6
-    n = 7
-    b = 8
-    r = 9
-    q = 10
-    k = 11
+    (
+        P, N, B, R, Q, K, 
+        p, n, b, r, q, k,
+    ) = range(12)
+
+    # protected
+    @classmethod
+    def _setup(cls):
+        pass
     
-    # properties
+    # conversion
     @property
     def kind(self) -> Piece.Kind:
         return Piece.Kind(self % 6)
@@ -98,15 +104,12 @@ class Piece(IntEnum):
         value = player * 6 + kind
         ans = cls(value)
         return ans
-    
-    #   fen
     @property
     def fen(self) -> str:
         return self.name
     @classmethod
     def by_fen(cls, value: str) -> Piece:
         return cls[value]
-    #   unicode
     @property
     def unicode(self) -> str:
         return chr(9823 - self)
@@ -122,11 +125,11 @@ class Piece(IntEnum):
         raise ValueError(value)
 
     # methods
-    def swapplayer(self) -> typing.Self:
+    def turntable(self) -> typing.Self:
         cls = type(self)
         ans = cls.by_kind_and_player(
             kind=self.kind,
-            player=self.player.opponent(), 
+            player=self.player.turntable(), 
         )
         return ans
     

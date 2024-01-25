@@ -1,11 +1,9 @@
 # imports
 import typing
-from dataclasses import dataclass
 
 from .errors import *
-from .fenPositions import *
 from .players import *
-from .plies import *
+from .plies_and_positions import *
 from .terminations import *
 
 # __all__
@@ -15,92 +13,101 @@ __all__ = ['Seq']
 
 
 # classes
-@dataclass(frozen=True)
-class BaseSeq:
-    _fenPositions:typing.Tuple[FENPosition]
-    plies:typing.Tuple[Move]
-class Seq(BaseSeq):
+class Seq:
     # dunder
+    def __bool__(self):
+        return bool(len(self))
+    def __eq__(self, other) -> bool:
+        cls = type(self)
+        if type(other) is cls:
+            return 
+    def __getitem__(self, key):
+        cls = type(self)
+        if type(key) is int:
+            return self._plies[key]
+        if type(key) is not slice:
+            raise TypeError(key)
+        if key.step not in {None, 1}:
+            raise ValueError(key)
+        if key.start is None:
+            start = 0
+        else:
+            start = key.start
+        if start < len(self):
+            root = self._plies[start]
+        else:
+            root = Position()
+        plies = self._plies[key]
+        ucis = [ply.uci for ply in plies]
+        ans = cls(root=root, ucis=ucis)
+        return ans
+    def __hash__(self) -> int:
+        return self._plies.__hash__()
     def __init__(self, *,
-        plies:typing.Iterable[Move]=[],
-        root:FENPosition=FENPosition(),
+        root:Position=Position(),
+        ucis:typing.Iterable[Ply.UCI],
     ) -> None:
-        if type(root) is not FENPosition:
-            raise TypeError(root)
-        _fenPositions = [root]
-        plies = tuple(plies)
-        for ply in plies:
-            before = _fenPositions[-1]
-            after = before.apply(ply)
-            _fenPositions.append(after)
-        super().__init__(
-            _fenPositions=_fenPositions,
-            plies=plies,
-        )
-    # positions
-    @property
-    def after(self):
-        return self._fenPositions[1:]
-    @property
-    def before(self):
-        return self._fenPositions[:-1]
-    @property
-    def end(self):
-        return self._fenPositions[-1]
-    @property
-    def root(self):
-        return self._fenPositions[0]
-    # others
-    def apply(self, *plies):
-        cls = type(self)
-        plies = self.plies + tuple(plies)
-        ans = cls(
-            plies=plies,
-            root=self.root,
-        )
-        return ans
-    def flatten(self, index:int=-1, /):
-        cls = type(self)
-        if index >= 0:
-            j = index
-        else:
-            j = index + 1
-        plies = self.plies[j:]
-        root = self._fenPositions[index]
-        ans = cls(
-            plies=plies,
-            root=root,
-        )
-        return ans
-    def is_legal(self):
-        for fenPosition in self.before:
-            if fenPosition.termination is not None:
-                return False
-        
-    def reset(self, index:int=0) -> typing.Self:
-        cls = type(self)
-        if index >= 0:
-            j = index
-        else:
-            j = index + 1
-        plies = self.plies[j:]
-        ans = cls(
-            root=self.root,
-            plies=plies,
-        )
-        return ans
-    @property
-    def termination(self):
-        ans = self.end.termination
+        self._plies = list()
+        self._terminations = list()
+        before = root
+        ucis = tuple(ucis)
+        for uci in ucis:
+            t = self.__termination(before)
+            self._terminations.append(t)
+            ply = Ply(before=before, uci=uci)
+            self._plies.append(ply)
+            before = ply.after
+        self._is_legal = root.is_legal
+        for ply in self._plies:
+            self._is_legal &= ply.is_legal
+        for t in self._terminations:
+            self._is_legal &= t is None
+        t = self.__termination(before)
+        self._terminations.append(t)
+    def __iter__(self):
+        return iter(self._plies)
+    def __len__(self):
+        return len(self._plies)
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+    
+
+    #
+    @classmethod
+    def __termination(self, position):
+        ans = position.termination
         if ans is not None:
             return ans
-        i = -self.halfmove_clock - 1
-        if self._fenPositions[i:].count(self.end) + 1 >= 5:
+        count = 1 + sum(
+            position.is_repetition(ply.before)
+            for ply in self._plies
+        )
+        if 5 <= count:
             ans = Termination(
                 kind=Termination.Kind.FIVEFOLD_REPETITION,
-                subject=self.end.position.turn.opponent(),
+                subject=position.turn.turntable(),
             )
         return ans
+    
+
+    
+    # others
+    def apply(self, *ucis:Ply.UCI):
+        cls = type(self)
+        ucis = self.ucis + tuple(ucis)
+        ans = cls(
+            root=self.root,
+            ucis=ucis,
+        )
+        return ans
+    @classmethod
+    def null(cls):
+        return cls(ucis=[])
+    @property
+    def is_legal(self):
+        return self._is_legal
+    def termination(self, index, /):
+        return self._terminations[index]
 
 
 
