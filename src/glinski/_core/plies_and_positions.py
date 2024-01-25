@@ -30,56 +30,50 @@ class Position:
         cls = type(self)
         if type(other) is not cls:
             return False
-        return str(self) == str(other)
-    def __getattr__(self, key:str):
-        forbidden = {'__', '_calc', '_setup'}
-        if any(key.startswith(x) for x in forbidden):
-            raise AttributeError(key)
-        elif key.startswith('_'):
-            func = getattr(self, "_calc" + key)
-            ans = func()
-            setattr(self, key, ans)
-            return ans
-        else:
-            return getattr(self, '_' + key)
+        if self.board != other.board:
+            return False
+        if self.turn != other.turn:
+            return False
+        if self.ep_cell != other.ep_cell:
+            return False
+        if self.halfmove_clock != other.halfmove_clock:
+            return False
+        if self.fullmove_number != other.fullmove_number:
+            return False
+        return True
     def __hash__(self):
         return str(self).__hash__()
-    def __init__(self, 
-        string:typing.Optional[str]=None, /,
+    @typing.overload
+    def __init__(self, fen:str):
+        ...
+    @typing.overload
+    def __init__(self,
+        board:Board=Board(),
+        turn:Player=Player.WHITE,
+        ep_cell:typing.Optional[Cell]=None,
+        halfmove_clock=0,
+        fullmove_number=1,
     ):
-        # 
-        if string is not None:
-            (b, t, e, h, f) = str(string).split()
-        else:
-            b = "1/3/5/7/9/11/11/11/11/11/11"
-            t = 'w'
-            e = '-'
-            h = '0'
-            f = '1'
-        # board
-        self._board = Board.by_fen(b)
-        # turn
-        self._turn = Player.by_fen(t)
-        # halfmove_clock
-        self._halfmove_clock = int(h)
-        if self.halfmove_clock < 0:
-            raise ValueError(self.halfmove_clock)
-        # fullmove_number
-        self._fullmove_number = int(f)
-        if self.fullmove_number < 1:
-            raise ValueError(self.fullmove_number)
-        # ep_cell
-        self._ep_cell = self.__ep_cell(e)
-    def __ne__(self, other):
-        return not self.__eq__(other)
+        ...
+    def __init__(self, *args, **kwargs):
+        init = self.__get_init(*args, **kwargs)
+        init(*args, **kwargs)
+    def __repr__(self):
+        return self.fen
     def __str__(self):
         return self.fen
+    
 
 
 
     # hidden
     def __ep_cell(self, e, /):
-        e = Cell.by_fen(e)
+        if e is None:
+            e = None
+        elif issubclass(type(e), int):
+            e = Cell(e)
+        else:
+            e = Cell.by_fen(e)
         if e is None:
             return None
         if self.board.piece(e) is not None:
@@ -92,7 +86,39 @@ class Position:
             hand = walk.rotate(steps)
             hideout = e.apply(hand)
             if self.board.piece(hideout) == attacker:
-                return e
+                return e  
+        return None  
+    def __get_init(self, *args, **kwargs):
+        if (len(args) == 1) and (len(kwargs) == 0):
+            if type(args[0]) is not Board:
+                return self.__init_fen
+        if (len(args) == 0) and (len(kwargs) == 1):
+            if set(kwargs.keys()) == {'fen'}:
+                return self.__init_fen
+        return self.__init
+    def __init(self,
+        board:Board=Board(),
+        turn:Player=Player.WHITE,
+        ep_cell:typing.Optional[Cell]=None,
+        halfmove_clock=0,
+        fullmove_number=1,
+    ):
+        # board
+        self._board = Board(board)
+        # turn
+        if issubclass(type(turn), int):
+            self._turn = Player(turn)
+        else:
+            self._turn = Player.by_fen(turn)
+        # halfmove_clock
+        self._halfmove_clock = int(halfmove_clock)
+        # fullmove_number
+        self._fullmove_number = int(fullmove_number)
+        # ep_cell
+        self._ep_cell = self.__ep_cell(ep_cell)
+    def __init_fen(self, fen:str):
+        args = str(fen).split()
+        return self.__init(*args)
     def __pseudolegal_ucis(self, from_cell:Cell):
         p = self.board.piece(from_cell)
         if p is None:
@@ -287,17 +313,17 @@ class Ply:
             return str(self) == str(other)
         def __hash__(self) -> int:
             return str(self).__hash__()
-        def __init__(self, *, string:str="0000") -> None:
+        def __init__(self, string:str="0000") -> None:
             s = str(string).lower()
             s = "a1a1" if s == "0000" else s
-            i = 3 if s[2] in digits else 3
-            j = None if s[-1] in digits else -1
+            i = 3 if (s[2] in digits) else 2
+            j = len(s) if (s[-1] in digits) else -1
             self._from_cell = Cell[s[:i]]
             self._to_cell = Cell[s[i:j]]
             self._promotion = Piece.Kind.by_uci(s[j:], allow_empty=True)
             self._string = "0000" if (s == "a1a1") else s
-        def __ne__(self, other: typing.Any) -> bool:
-            return not (self == other)
+        def __repr__(self):
+            return "Ply.UCI('%s')" % str(self)
         def __str__(self) -> str:
             return self._string
 
@@ -324,16 +350,6 @@ class Ply:
         if self.uci != other.uci:
             return False
         return True
-    def __getattr__(self, key):
-        forbidden = {'__', '_calc', '_setup'}
-        if any(key.startswith(x) for x in forbidden):
-            raise AttributeError(key)
-        if not key.startswith('_'):
-            return getattr(self, '_' + key)
-        func = getattr(self, "_calc" + key)
-        ans = func()
-        setattr(self, key, ans)
-        return ans
     def __hash__(self) -> int:
         return str(self).__hash__()
     def __init__(self, *,

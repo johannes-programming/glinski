@@ -19,8 +19,9 @@ class Seq:
         return bool(len(self))
     def __eq__(self, other) -> bool:
         cls = type(self)
-        if type(other) is cls:
-            return 
+        if type(other) is not cls:
+            return False
+        return self._plies == other._plies
     def __getitem__(self, key):
         cls = type(self)
         if type(key) is int:
@@ -39,15 +40,24 @@ class Seq:
             root = Position()
         plies = self._plies[key]
         ucis = [ply.uci for ply in plies]
-        ans = cls(root=root, ucis=ucis)
+        ans = cls(*ucis, root=root)
         return ans
     def __hash__(self) -> int:
         return self._plies.__hash__()
-    def __init__(self, *,
-        root:Position=Position(),
-        ucis:typing.Iterable[Ply.UCI],
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, 
+        root:Position,
+        *ucis:Ply.UCI,
     ) -> None:
-        self._plies = list()
+        ...
+    def __init__(self, 
+        root:Position=None,
+        *ucis:Ply.UCI,
+    ) -> None:
+        plies = list()
         self._terminations = list()
         before = root
         ucis = tuple(ucis)
@@ -55,8 +65,9 @@ class Seq:
             t = self.__termination(before)
             self._terminations.append(t)
             ply = Ply(before=before, uci=uci)
-            self._plies.append(ply)
+            plies.append(ply)
             before = ply.after
+        self._plies = tuple(plies)
         self._is_legal = root.is_legal
         for ply in self._plies:
             self._is_legal &= ply.is_legal
@@ -100,9 +111,6 @@ class Seq:
             ucis=ucis,
         )
         return ans
-    @classmethod
-    def null(cls):
-        return cls(ucis=[])
     @property
     def is_legal(self):
         return self._is_legal

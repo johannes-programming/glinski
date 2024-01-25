@@ -1,3 +1,4 @@
+from .bitBoards import *
 from .boards import *
 from .cells_and_files import *
 from .errors import *

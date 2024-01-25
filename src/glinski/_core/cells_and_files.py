@@ -2,8 +2,7 @@
 from __future__ import annotations
 
 import typing
-from collections.abc import Iterator
-from enum import IntEnum, Enum
+from enum import Enum, IntEnum
 
 import upcounting
 from isometric import Vector
@@ -37,7 +36,6 @@ class Color(Enum):
 
 
 
-
 # File
 class File(IntEnum):
     (a, b, c, d, e, f, g, h, i, k, l) = range(11)
@@ -53,8 +51,6 @@ class File(IntEnum):
         cls = type(self)
         ans = cls(10 - self)
         return ans
-
-
 
 
 
@@ -75,6 +71,7 @@ class Cell(IntEnum):
         k1, k2, k3, k4, k5, k6, k7, 
         l1, l2, l3, l4, l5, l6, 
     ) = range(91)
+
     
     # protected
     @classmethod
@@ -120,8 +117,6 @@ class Cell(IntEnum):
             cls[k]._VFLIP._NATIVE = v.turntable()
         
 
-
-
     # conversion
     @property
     def fen(self) -> str:
@@ -155,11 +150,14 @@ class Cell(IntEnum):
     def rank(self) -> int:
         return int(self.name[1:])
     @classmethod
-    def by_file_and_rank(cls, file:File, rank:int) -> typing.Self:
+    def by_file_and_rank(cls, 
+        file:File, 
+        rank:int,
+    ) -> typing.Self:
         return File(file)[rank]
 
     
-    #     other
+    # public
     def apply(self, 
         vector:Vector,
     ) -> typing.Self:
@@ -212,7 +210,9 @@ class Cell(IntEnum):
             else:
                 ans.append(other_cell)
         return ans
-    def slide(self, vector:Vector) -> typing.Generator[typing.Self, None, None]:
+    def slide(self, 
+        vector:Vector
+    ) -> typing.Generator[typing.Self, None, None]:
         cls = type(self)
         if type(vector) is not Vector:
             raise TypeError(vector)
@@ -240,8 +240,6 @@ class Cell(IntEnum):
         return -self.vector_from(other)
     def vflip(self) -> typing.Self:
         return self._VFLIP
-
-
 
 
 Cell._setup()

@@ -30,19 +30,21 @@ class Board:
         if type(other) is not cls:
             return False
         return self._bitBoards == other._bitBoards
+    @typing.overload
+    def __init__(self, fen:str):
+        ...
+    @typing.overload
+    def __init__(self, 
+        P:BitBoard=0, N:BitBoard=0, B:BitBoard=0, 
+        R:BitBoard=0, Q:BitBoard=0, K:BitBoard=0, 
+        p:BitBoard=0, n:BitBoard=0, b:BitBoard=0, 
+        r:BitBoard=0, q:BitBoard=0, k:BitBoard=0,
+    ):
+        ...
     def __init__(self, *args, **kwargs):
-        if 'fen' in kwargs.keys():
-            version = self.__init_fen
-        elif len(args) != 1:
-            version = self.__init_bitBoards
-        elif issubclass(type(args[0]), int):
-            version = self.__init_bitBoards
-        else:
-            version = self.__init_fen
-        version(*args, **kwargs)
+        init = self.__get_init(*args, **kwargs)
+        init(*args, **kwargs)
         self._fen = self.__fen()
-    def __ne__(self, other):
-        return not self.__eq__(other)
     def __repr__(self) -> str:
         return self.text()
     def __str__(self) -> str:
@@ -80,6 +82,14 @@ class Board:
             ans += '/'
         ans = ans[:-1]
         return ans
+    def __get_init(self, *args, **kwargs):
+        if (len(args) == 0) and (len(kwargs) == 1):
+            if set(kwargs.keys()) == {'fen'}:
+                return self.__init_fen
+        if (len(args) == 1) and (len(kwargs) == 0):
+            if not issubclass(type(args[0]), int):
+                return self.__init_fen
+        return self.__init_bitBoards
     def __init_bitBoards(self, 
         P:BitBoard=0, N:BitBoard=0, B:BitBoard=0, 
         R:BitBoard=0, Q:BitBoard=0, K:BitBoard=0, 
