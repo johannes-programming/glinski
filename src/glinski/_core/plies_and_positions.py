@@ -13,6 +13,7 @@ from .consts import *
 from .errors import *
 from .pieces import *
 from .players import *
+from .strangeFuncs import *
 from .terminations import *
 
 # __all__
@@ -224,14 +225,18 @@ class Position:
         )
     
 
-    #
+
+
+    # setup
     @classmethod
     def _setup(cls):
-        native_fen = Board.native().fen + " w - 0 1" 
-        cls._NATIVE = cls(native_fen)
+        cls.__getattr__ = strangeFuncs.dataGetattr
+        cls._NATIVE = cls(Board.native())
 
 
-    #
+
+
+    # public
     @classmethod
     def by_fen(cls, value, /):
         return cls(value)
@@ -248,6 +253,20 @@ class Position:
     @classmethod
     def native(cls):
         return cls._NATIVE
+    def turntable(self):
+        cls = type(self)
+        if self.ep_cell is None:
+            ep_cell = None
+        else:
+            ep_cell = self.ep_cell.turntable()
+        ans = cls(
+            board=self.board.turntable(),
+            turn=self.turn.turntable(),
+            ep_cell=ep_cell,
+            halfmove_clock=self.halfmove_clock,
+            fullmove_number=self.fullmove_number,
+        )
+        return ans
 Position._setup()
 
 
@@ -324,8 +343,6 @@ class Ply:
         self._before = Position(before)
         self._uci = Ply.UCI(uci)
         self.__check()
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
 
     #   
@@ -480,6 +497,16 @@ class Ply:
     def _calc_vector(self):
         return self.uci.from_cell.vector_to(self.uci.to_cell)
     
+
+
+    # setup
+    @classmethod
+    def _setup(cls):
+        cls.__getattr__ = strangeFuncs.dataGetattr
+
+
+
+Ply._setup()
 
 
 

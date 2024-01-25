@@ -1,6 +1,5 @@
 from .boards import *
 from .cells_and_files import *
-from .colors import *
 from .errors import *
 from .outcomes import *
 from .pieces import *

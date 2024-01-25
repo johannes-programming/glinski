@@ -174,9 +174,9 @@ class Board:
             cls._PAWN_ENV_BY_PLAYER[player] = cls.__envs(
                 consts.motions.PAWN_ATTACKS_BY_PLAYER[player]
             )
-            
+        # native
         change = {c:c.native() for c in Cell}
-        cls._NATIVE = cls(0).apply(change)
+        cls._NATIVE = cls().apply(change)
 
 
 

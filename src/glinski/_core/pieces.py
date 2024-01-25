@@ -62,7 +62,7 @@ class Kind(IntEnum):
         if allow_empty and (v == ""):
             return None
         for x in cls:
-            if x.uci == v:
+            if x._UCI == v:
                 return x
         raise ValueError(value)
 
@@ -71,7 +71,7 @@ class Kind(IntEnum):
     def is_sliding(self) -> bool:
         return 2 <= self <= 4
     
-
+Kind._setup()
 
 
 
@@ -85,7 +85,7 @@ class Piece(IntEnum):
     # protected
     @classmethod
     def _setup(cls):
-        pass
+        cls.Kind = Kind
     
     # conversion
     @property
@@ -133,7 +133,7 @@ class Piece(IntEnum):
         )
         return ans
     
-Piece.Kind = Kind
+Piece._setup()
 
 
 

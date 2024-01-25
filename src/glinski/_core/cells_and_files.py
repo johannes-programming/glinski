@@ -3,12 +3,11 @@ from __future__ import annotations
 
 import typing
 from collections.abc import Iterator
-from enum import IntEnum
+from enum import IntEnum, Enum
 
 import upcounting
 from isometric import Vector
 
-from .colors import *
 from .pieces import *
 from .players import *
 
@@ -21,6 +20,24 @@ __all__ = [
 
 
 
+# class
+class Color(Enum):
+    LIGHT = 1.0
+    MEDIUM = 0.5
+    DARK = 0.0
+    def turntable(self):
+        cls = type(self)
+        ans = {
+            cls.LIGHT:cls.DARK,
+            cls.MEDIUM:cls.MEDIUM,
+            cls.DARK:cls.LIGHT,
+        }[self]
+        return ans
+
+
+
+
+
 # File
 class File(IntEnum):
     (a, b, c, d, e, f, g, h, i, k, l) = range(11)
@@ -29,7 +46,7 @@ class File(IntEnum):
             raise TypeError(rank)
         return Cell[self.name + str(rank)]
     def __iter__(self):
-        return iter(self[n + 1] for n in range(len(self)))
+        return (self[n + 1] for n in range(len(self)))
     def __len__(self) -> int:
         return 11 - abs(self - 5)
     def turntable(self) -> typing.Self:
@@ -62,6 +79,7 @@ class Cell(IntEnum):
     # protected
     @classmethod
     def _setup(cls):
+        cls.Color = Color
         for o in cls:
             x = min(0, 5 - o.file)
             y = min(0, o.file - 5)
@@ -82,7 +100,7 @@ class Cell(IntEnum):
             f9 = Piece.b,
             f10 = Piece.b,
             f11 = Piece.b,
-            g10 = Piece.b,
+            g10 = Piece.k,
             h9 = Piece.n,
             i8 = Piece.r,
             b7 = Piece.p,

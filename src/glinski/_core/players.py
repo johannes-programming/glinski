@@ -25,7 +25,6 @@ class Player(IntEnum):
             cls.__new__,
             modulus=2,
         )
-        cls.__invert__ = cls.turntable
 
 
 
