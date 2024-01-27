@@ -47,34 +47,48 @@ class Seq:
     @typing.overload
     def __init__(self) -> None:
         ...
+    def _init_null(self) -> None:
+        self._init(root=Position())
     @typing.overload
     def __init__(self, 
-        root:Position,
         *ucis:Ply.UCI,
+        root:Position,
     ) -> None:
         ...
-    def __init__(self, 
-        root:Position=None,
+    def _init_not_null(self, 
         *ucis:Ply.UCI,
+        root:Position,
     ) -> None:
-        plies = list()
-        self._terminations = list()
+        self._init(*ucis, root=root)
+    def __init__(self, *args, **kwargs) -> None:
+        if len(args) + len(kwargs):
+            self._init_not_null(*args, **kwargs)
+        else:
+            self._init_null()
+    def _init(self, 
+        *ucis:Ply.UCI,
+        root:Position,
+    ) -> None:
+        root = Position(root)
         before = root
+        plies = list()
+        terminations = list()
         ucis = tuple(ucis)
         for uci in ucis:
-            t = self.__termination(before)
-            self._terminations.append(t)
+            t = self._termination(before)
+            terminations.append(t)
             ply = Ply(before=before, uci=uci)
             plies.append(ply)
-            before = ply.after
+            before = ply.after()
         self._plies = tuple(plies)
-        self._is_legal = root.is_legal
+        self._is_legal = root.is_legal()
         for ply in self._plies:
-            self._is_legal &= ply.is_legal
-        for t in self._terminations:
+            self._is_legal &= ply.is_legal()
+        for t in terminations:
             self._is_legal &= t is None
-        t = self.__termination(before)
-        self._terminations.append(t)
+        t = self._termination(before)
+        terminations.append(t)
+        self._terminations = tuple(terminations)
     def __iter__(self):
         return iter(self._plies)
     def __len__(self):
@@ -85,8 +99,8 @@ class Seq:
 
     #
     @classmethod
-    def __termination(self, position):
-        ans = position.termination
+    def _termination(self, position):
+        ans = position.termination()
         if ans is not None:
             return ans
         count = 1 + sum(

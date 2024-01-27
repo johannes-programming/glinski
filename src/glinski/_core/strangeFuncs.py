@@ -1,4 +1,6 @@
 
+import typing
+
 from staticclasses import staticclass
 
 # __all__
@@ -17,20 +19,7 @@ class strangeFuncs(staticclass):
             v %= self._modulus
             ans = self._new(cls, v)
             return ans
-    def dataGetattr(self, key:str):
-        if key == 'setup':
-            raise AttributeError(key)
-        if key.startswith('__'):
-            raise AttributeError(key)
-        if key.startswith('_calc'):
-            raise AttributeError(key)
-        if not key.startswith('_'):
-            return getattr(self, '_' + key)
-        func = getattr(self, "_calc" + key)
-        ans = func()
-        setattr(self, key, ans)
-        return ans
-
+        
 
 
         
