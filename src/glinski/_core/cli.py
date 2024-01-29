@@ -1,5 +1,5 @@
 # imports
-import typing
+from typing import Iterable
 
 from staticclasses import staticclass
 
@@ -15,7 +15,7 @@ __all__ = ['cli']
 class cli(staticclass):
     def __init__(self) -> None:
         raise NotImplementedError
-    def text(symbols:typing.Iterable[str]):
+    def text(symbols:Iterable[str]):
         symbols = list(symbols)
         maxstrlen = 0
         for cell in Cell:

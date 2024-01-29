@@ -1,8 +1,8 @@
 # imports
 from __future__ import annotations
 
-import typing
 from enum import IntEnum
+from typing import Self
 
 from .players import *
 
@@ -57,7 +57,7 @@ class Kind(IntEnum):
         else:
             return ans
     @classmethod
-    def by_uci(cls, value:str, /, allow_empty=False) -> typing.Self:
+    def by_uci(cls, value:str, /, allow_empty=False) -> Self:
         v = str(value)
         if allow_empty and (v == ""):
             return None
@@ -98,7 +98,7 @@ class Piece(IntEnum):
     def by_kind_and_player(cls, 
         kind:Piece.Kind,
         player:Player,
-    ) -> typing.Self:
+    ) -> Self:
         kind = Piece.Kind(kind)
         player = Player(player)
         value = player * 6 + kind
@@ -114,7 +114,7 @@ class Piece(IntEnum):
     def unicode(self) -> str:
         return chr(9823 - self)
     @classmethod
-    def by_unicode(cls, value:str) -> typing.Self:
+    def by_unicode(cls, value:str) -> Self:
         if type(value) is not str:
             raise TypeError(value)
         for player in Player:
@@ -125,7 +125,7 @@ class Piece(IntEnum):
         raise ValueError(value)
 
     # methods
-    def turntable(self) -> typing.Self:
+    def turntable(self) -> Self:
         cls = type(self)
         ans = cls.by_kind_and_player(
             kind=self.kind,

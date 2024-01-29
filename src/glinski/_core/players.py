@@ -1,6 +1,6 @@
 # imports
-import typing
 from enum import IntEnum
+from typing import Self
 
 from .strangeFuncs import *
 
@@ -36,7 +36,7 @@ class Player(IntEnum):
                 return item
         raise ValueError(value)
     # others
-    def turntable(self) -> typing.Self:
+    def turntable(self) -> Self:
         cls = type(self)
         value = 1 - self.value
         ans = cls(value)

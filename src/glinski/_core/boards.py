@@ -104,6 +104,32 @@ class Board:
 
     # other protected methods
     @classmethod
+    def _axial_attacks(cls, 
+        origin:Cell, *, 
+        allowed:BitBoard,
+        occupied:BitBoard,
+    ):
+        ans = BitBoard(0)
+        for i in range(6):
+            j = occupied.axial_gap(origin, direction=i)
+            ans |= BitBoard.axial_mask(origin, direction=i, gap=j)
+            if j != -1:
+                ans |= origin.axial_ray(i)[j].flag & allowed
+        return ans
+    @classmethod
+    def _diagonal_attacks(cls, 
+        origin:Cell, *, 
+        allowed:BitBoard,
+        occupied:BitBoard,
+    ):
+        ans = BitBoard(0)
+        for i in range(6):
+            j = occupied.diagonal_gap(origin, direction=i)
+            ans |= BitBoard.diagonal_mask(origin, direction=i, gap=j)
+            if j != -1:
+                ans |= origin.diagonal_ray(i)[j].flag & allowed
+        return ans
+    @classmethod
     def _envs(vectors:Iterable[Vector]):
         ans = [BitBoard(0)] * 91
         for cell in Cell:
@@ -128,25 +154,25 @@ class Board:
             taken |= bitBoards[i]
         return bitBoards
     @classmethod
-    def _parse_fen(self, fen:str):
-        cls = type(self)
+    def _parse_fen(cls, fen:str):
         fen = str(fen)
         boardpieces = [""] * 91
         parts = fen.split('/')
         if len(parts) != 11:
             raise ValueError(fen)
         for part, cells in zip(parts, cls._RANKS):
-            rankpieces = self._parse_fen_rank(part)
+            rankpieces = cls._parse_fen_rank(part)
             if len(rankpieces) != len(cells):
                 raise ValueError(fen)
             for piece, cell in zip(rankpieces, cells):
                 boardpieces[cell] = piece
-        ans = [BitBoard(0)] * 12
+        ans = [0] * 12
         for cell in Cell:
             piece = boardpieces[cell]
             if piece is None:
                 continue
             ans[piece] |= cell.flag
+        ans = tuple(BitBoard(x) for x in ans)
         return ans
     @classmethod
     def _parse_fen_rank(cls, string):
@@ -263,22 +289,18 @@ class Board:
         ans |= self.bitBoard(knight) & cls._KNIGHT_ENV[cell]
         ans |= self.bitBoard(king) & cls._KING_ENV[cell]
         #
-        diagonal_danger = self.bitBoard(bishop) | self.bitBoard(queen)
-        line_danger = self.bitBoard(rook) | self.bitBoard(queen)
-        modes = (
-            (diagonal_danger, consts.motions.DIAGONAL),
-            (line_danger, consts.motions.LINE),
-        )
         occupied = self.occupied()
-        #
-        for danger, motion in modes:
-            for v in motion:
-                for possible in cell.slide(v):
-                    if possible.flag & danger:
-                        ans |= possible.flag
-                    if possible.flag & occupied:
-                        break
-        # 
+        danger = self.bitBoard(bishop) | self.bitBoard(queen)
+        for i in range(6):
+            j = occupied.diagonal_gap(cell, direction=i)
+            if j != -1:
+                ans |= cell.diagonal_ray(i)[j].flag & danger
+        danger = self.bitBoard(rook) | self.bitBoard(queen)
+        for i in range(6):
+            j = occupied.axial_gap(cell, direction=i)
+            if j != -1:
+                ans |= cell.axial_ray(i)[j].flag & danger
+        ans = BitBoard(ans)
         return ans
     def attacks(self,
         cell:Cell, *,
@@ -293,32 +315,31 @@ class Board:
         if piece is None:
             return BitBoard(0)
         player = piece.player
-        kind = piece.kind
+        kind = int(piece.kind)
         allowed = ~self.occupied(player)
         #
-        if kind == Piece.Kind.PAWN:
+        if kind == 0: # pawn
             envs = cls._PAWN_ENV_BY_PLAYER[player]
             return allowed & envs[cell]
-        if kind == Piece.Kind.KNIGHT:
+        if kind == 1: # knight
             return allowed & cls._KNIGHT_ENV[cell]
-        if kind == Piece.Kind.KING:
+        if kind == 5: # king
             return allowed & cls._KING_ENV[cell]
-        #
-        if kind == Piece.Kind.BISHOP:
-            vectors = consts.motions.DIAGONAL
-        if kind == Piece.Kind.ROOK:
-            vectors = consts.motions.LINE
-        if kind == Piece.Kind.QUEEN:
-            vectors = set(consts.motions.DIAGONAL).union(consts.motions.LINE)
         #
         occupied = self.occupied()
         ans = BitBoard(0)
-        for v in vectors:
-            for possible in cell.slide(v):
-                if possible.flag & allowed:
-                    ans |= possible.flag
-                if possible.flag & occupied:
-                    break
+        if kind in {2, 4}: # bishop or queen
+            ans |= self._diagonal_attacks(
+                cell, 
+                allowed=allowed, 
+                occupied=occupied,
+            )
+        if kind in {3, 4}: # rook or queen
+            ans |= self._axial_attacks(
+                cell, 
+                allowed=allowed, 
+                occupied=occupied,
+            )
         return ans
     def bitBoard(self, piece:Piece):
         piece = Piece(piece)

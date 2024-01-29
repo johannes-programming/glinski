@@ -1,8 +1,8 @@
 # imports
 from __future__ import annotations
 
-import typing
 from enum import Enum, IntEnum
+from typing import Generator, Iterable, List, Self, Tuple, Union
 
 import upcounting
 from isometric import Vector
@@ -47,7 +47,7 @@ class File(IntEnum):
         return (self[n + 1] for n in range(len(self)))
     def __len__(self) -> int:
         return 11 - abs(self - 5)
-    def turntable(self) -> typing.Self:
+    def turntable(self) -> Self:
         cls = type(self)
         ans = cls(10 - self)
         return ans
@@ -90,6 +90,32 @@ class Cell(IntEnum):
         cls._BY_VECTOR = dict()
         for o in cls:
             cls._BY_VECTOR[o._VECTOR] = o
+        for y in range(0, 1):
+            for o in cls:
+                u = Vector(x=1, y=y)
+                rays = list()
+                for direction in range(6):
+                    v = u.rotate(direction)
+                    ray = list()
+                    for skip in upcounting.count_up():
+                        try:
+                            c = o.apply((skip + 1) * v)
+                        except:
+                            break
+                        else:
+                            ray.append(c)
+                    ray = tuple(ray)
+                    rays.append(ray)
+                rays = tuple(rays)
+                if y:
+                    o._DIAGONAL_RAYS = rays
+                else:
+                    o._AXIAL_RAYS = rays
+        
+        
+                    
+
+
         blackdraft = dict(
             c8 = Piece.r,
             d9 = Piece.n,
@@ -122,7 +148,7 @@ class Cell(IntEnum):
     def fen(self) -> str:
         return self.name
     @classmethod
-    def by_fen(cls, value:str, /) -> typing.Self:
+    def by_fen(cls, value:str, /) -> Self:
         value = str(value).lower()
         if value == '-':
             return None
@@ -153,20 +179,20 @@ class Cell(IntEnum):
     def by_file_and_rank(cls, 
         file:File, 
         rank:int,
-    ) -> typing.Self:
+    ) -> Self:
         return File(file)[rank]
 
     
     # public
-    def apply(self, 
-        vector:Vector,
-    ) -> typing.Self:
+    def apply(self, vector:Vector) -> Self:
         cls = type(self)
         if type(vector) is not Vector:
             raise TypeError(vector)
         w = self._VECTOR + vector
         ans = cls._BY_VECTOR[w]
         return ans
+    def axial_ray(self, direction:int) -> Tuple[Self]:
+        return self._AXIAL_RAYS[direction % 6]
     @property
     def color(self) -> Color:
         return self._COLOR
@@ -174,8 +200,8 @@ class Cell(IntEnum):
         vector:Vector,
         start:int=0,
         stop=None,
-    ) -> typing.Generator[
-        typing.Tuple[int, typing.Self],
+    ) -> Generator[
+        Tuple[int, Self],
         None,
         None,
     ]:
@@ -189,13 +215,15 @@ class Cell(IntEnum):
                 return
             else:
                 v += vector
-    def hflip(self) -> typing.Self:
+    def diagonal_ray(self, direction:int) -> Tuple[Self]:
+        return self._DIAGONAL_RAYS[direction % 6]
+    def hflip(self) -> Self:
         return self._HFLIP
-    def native(self) -> typing.Union[Piece, None]:
+    def native(self) -> Union[Piece, None]:
         return self._NATIVE
     def search(self, 
-        vectors:typing.Iterable[Vector],
-    ) -> typing.List[typing.Self]:
+        vectors:Iterable[Vector],
+    ) -> List[Self]:
         cls = type(self)
         vectors = list(vectors)
         ans = list()
@@ -212,7 +240,7 @@ class Cell(IntEnum):
         return ans
     def slide(self, 
         vector:Vector
-    ) -> typing.Generator[typing.Self, None, None]:
+    ) -> Generator[Self, None, None]:
         cls = type(self)
         if type(vector) is not Vector:
             raise TypeError(vector)
@@ -223,7 +251,7 @@ class Cell(IntEnum):
                 yield cls._BY_VECTOR[u]
             except:
                 break
-    def text_position(self) -> typing.Tuple[int, int]:
+    def text_position(self) -> Tuple[int, int]:
         return self._TEXT_POSITION
     def turntable(self):
         cls = type(self)
@@ -231,14 +259,14 @@ class Cell(IntEnum):
         value = 90 - value
         ans = cls(value)
         return ans
-    def vector_from(self, other:typing.Self) -> Vector:
+    def vector_from(self, other:Self) -> Vector:
         cls = type(self)
         other = cls(other)
         ans = self._VECTOR - other._VECTOR
         return ans
-    def vector_to(self, other:typing.Self) -> Vector:
+    def vector_to(self, other:Self) -> Vector:
         return -self.vector_from(other)
-    def vflip(self) -> typing.Self:
+    def vflip(self) -> Self:
         return self._VFLIP
 
 

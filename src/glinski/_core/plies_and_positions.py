@@ -1,8 +1,8 @@
 # imports
 from __future__ import annotations
 
-import typing
 from string import digits
+from typing import Any, Optional, Self, Set, overload
 
 from isometric import Vector
 from staticclasses import staticclass
@@ -42,7 +42,7 @@ class Position:
         return str(self) == str(other)
     def __hash__(self):
         return str(self).__hash__()
-    @typing.overload
+    @overload
     def __init__(self, fen:str):
         ...
     def _init_fen(self, fen:str):
@@ -51,11 +51,11 @@ class Position:
             return self._init_items(*parts)
         except ValueError:
             raise ValueError(fen)  
-    @typing.overload
+    @overload
     def __init__(self,
         board:Board=Board(),
         turn:Player=Player.WHITE,
-        ep_cell:typing.Optional[Cell]=None,
+        ep_cell:Optional[Cell]=None,
         halfmove_clock=0,
         fullmove_number=1,
     ):
@@ -63,7 +63,7 @@ class Position:
     def _init_items(self,
         board:Board=Board(), 
         turn:Player=Player.WHITE,
-        ep_cell:typing.Optional[Cell]=None,
+        ep_cell:Optional[Cell]=None,
         halfmove_clock=0, 
         fullmove_number=1,
     ):
@@ -82,9 +82,10 @@ class Position:
     def _init(self,
         board:Board,
         turn:Player,
-        ep_cell:typing.Optional[Cell],
+        ep_cell:Optional[Cell],
         halfmove_clock:int,
         fullmove_number:int,
+        /, 
     ):
         # properties
         self._board = Board(board)
@@ -180,11 +181,11 @@ class Position:
         if self.board.piece(ep_killzone) != ep_victim:
             return False
         return True
-    def _calc_legal_plies(self) -> typing.Set[Ply]:
+    def _calc_legal_plies(self) -> Set[Ply]:
         if self.halfmove_clock >= 150:
             return set()
         return self._semilegal_plies()
-    def _calc_pseudolegal_plies(self) -> typing.Set[Ply]:
+    def _calc_pseudolegal_plies(self) -> Set[Ply]:
         ucis = {"0000"}
         for c in Cell:
             ucis |= self._pseudolegal_ucis(from_cell=c)
@@ -192,7 +193,7 @@ class Position:
             Ply(before=self, uci=uci) 
             for uci in ucis
         }
-    def _calc_semilegal_plies(self) -> typing.Set[Ply]:
+    def _calc_semilegal_plies(self) -> Set[Ply]:
         return {
             p for p in self.pseudolegal_plies()
             if (p.uci and not p.after().is_illegal_check())
@@ -271,15 +272,15 @@ class Position:
 
 
     # prn 
-    def _semilegal_plies(self) -> typing.Set[Ply]:
+    def _semilegal_plies(self) -> Set[Ply]:
         if self._prn_semilegal_plies is EMPTY:
             self._prn_semilegal_plies = self._calc_semilegal_plies()
         return set(self._prn_semilegal_plies)
-    def legal_plies(self) -> typing.Set[Ply]:
+    def legal_plies(self) -> Set[Ply]:
         if self._prn_legal_plies is EMPTY:
             self._prn_legal_plies = self._calc_legal_plies()
         return set(self._prn_legal_plies)
-    def pseudolegal_plies(self) -> typing.Set[Ply]:
+    def pseudolegal_plies(self) -> Set[Ply]:
         if self._prn_pseudolegal_plies is EMPTY:
             self._prn_pseudolegal_plies = self._calc_pseudolegal_plies()
         return set(self._prn_pseudolegal_plies)
@@ -382,19 +383,19 @@ class Ply:
         # magic methods
         def __bool__(self):
             return self._string != "0000"
-        def __eq__(self, other: typing.Any) -> bool:
+        def __eq__(self, other: Any) -> bool:
             cls = type(self)
             if type(other) is not cls:
                 return False
             return str(self) == str(other)
         def __hash__(self) -> int:
             return str(self).__hash__()
-        @typing.overload
+        @overload
         def __init__(self):
             ...
         def _init_null(self):
             self._init('0000', Cell.a1, Cell.a1, None)
-        @typing.overload
+        @overload
         def __init__(self, string:str, /):
             ...
         def _init_str(self, string:str, /):
@@ -403,17 +404,17 @@ class Ply:
             j = len(s) if (s[-1] in digits) else -1
             p = Piece.Kind.by_uci(s[j:], allow_empty=True)
             self._init(s, Cell[s[:i]], Cell[s[i:j]], p)
-        @typing.overload
+        @overload
         def __init__(self,
             from_cell:Cell,
             to_cell:Cell,
-            promotion:typing.Optional[Piece.Kind]=None,
+            promotion:Optional[Piece.Kind]=None,
         ):
             ...
         def _init_items(self,
             from_cell:Cell,
             to_cell:Cell,
-            promotion:typing.Optional[Piece.Kind]=None,
+            promotion:Optional[Piece.Kind]=None,
         ):
             from_cell = Cell(from_cell)
             s = from_cell.uci
@@ -440,7 +441,7 @@ class Ply:
             string:str, 
             from_cell:Cell,
             to_cell:Cell,
-            promotion:typing.Optional[Piece.Kind],
+            promotion:Optional[Piece.Kind],
             /,
         ):
             self._from_cell = from_cell
@@ -468,7 +469,7 @@ class Ply:
         def to_cell(self) -> Cell:
             return self._to_cell
         @property
-        def promotion(self) -> typing.Optional[Piece.Kind]:
+        def promotion(self) -> Optional[Piece.Kind]:
             return self._promotion
 
     # magic methods
@@ -694,11 +695,11 @@ class Ply:
     # other public methods
     def after(self) -> Position:
         return self._after
-    def capture(self) -> typing.Optional[Piece]:
+    def capture(self) -> Optional[Piece]:
         return self._capture
     def piece(self) -> Piece:
         return self._piece
-    def turntable(self) -> typing.Self:
+    def turntable(self) -> Self:
         cls = type(self)
         ans = cls(
             before=self.before.turntable(),

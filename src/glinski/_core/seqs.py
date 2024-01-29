@@ -1,5 +1,5 @@
 # imports
-import typing
+from typing import overload
 
 from .errors import *
 from .players import *
@@ -44,12 +44,12 @@ class Seq:
         return ans
     def __hash__(self) -> int:
         return self._plies.__hash__()
-    @typing.overload
+    @overload
     def __init__(self) -> None:
         ...
     def _init_null(self) -> None:
         self._init(root=Position())
-    @typing.overload
+    @overload
     def __init__(self, 
         *ucis:Ply.UCI,
         root:Position,
