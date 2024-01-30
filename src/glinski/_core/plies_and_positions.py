@@ -232,35 +232,45 @@ class Position:
     
 
     # more protected methods
+    def _pawn_walk_cells(self, from_cell:Cell):
+        cls = type(self)
+        if from_cell.flag & cls._PROMOTING[self.turn]:
+            return BitBoard(0)
+        if self.turn == Player.WHITE:
+            one_ahead = Cell(from_cell + 1)
+        else:
+            one_ahead = Cell(from_cell - 1)
+        if one_ahead.flag & self.board.occupied():
+            return BitBoard(0)
+        if from_cell.native() != self.turn * 6:
+            return BitBoard(one_ahead.flag)
+        if self.turn == Player.WHITE:
+            one_ahead = Cell(from_cell + 1)
+        else:
+            one_ahead = Cell(from_cell - 1)
+        
     def _pseudolegal_ucis(self, from_cell:Cell):
+        cls = type(self)
         p = self.board.piece(from_cell)
         if p is None:
             return set()
         if p.player != self.turn:
             return set()
-        attacks = self.board.attacks(cell=from_cell, piece=p).cells
+        attacks = self.board.attacks(cell=from_cell, piece=p)
+        attacks &= ~self.board.occupied(self.turn)
         if p.kind != Piece.Kind.PAWN:
-            return {(from_cell.uci + a.uci) for a in attacks}
-        pawn_to_cells = set()
-        for a in attacks:
-            if self.board.piece(a) is not None:
-                pawn_to_cells.add(a)
-            if a == self.ep_cell:
-                pawn_to_cells.add(a)
-        walk = consts.vectors.PAWN_WALKS_BY_PLAYER[self.turn]
-        for order in range(1, 3):
-            try:
-                a = from_cell.apply(walk * order)
-            except:
-                break
-            if self.board.piece(a) is not None:
-                break
-            pawn_to_cells.add(a)
-            if from_cell.native() != p:
-                break
+            return {
+                (from_cell.uci + a.uci) 
+                for a in attacks.cells
+            }
+        targets = self.board.occupied(~self.turn) | self.ep_bitBoard()
+        attacks &= targets
+        walks = self.board.occupied().walks(from_cell, p)
+        goals = attacks | walks
+        to_cells = goals.cells
         ans = set()
-        for a in pawn_to_cells:
-            if a.flag & consts.bitBoards.promotions[self.turn]:
+        for a in to_cells:
+            if a.flag & cls._PROMOTING[self.turn]:
                 for p in "nbrq":
                     ans.add(from_cell.uci + a.uci + p)
             else:
@@ -268,7 +278,48 @@ class Position:
         return ans
     @classmethod
     def _setup(cls):
+        #
         cls._NATIVE = cls(Board.native())
+        #
+        black_promoting = BitBoard(0)
+        for file in File:
+            black_promoting |= file[1].flag
+        promoting = [None] * 2
+        promoting[Player.WHITE] = ~black_promoting
+        promoting[Player.BLACK] = black_promoting
+        promoting = tuple(promoting)
+        cls._PROMOTING = promoting
+        #
+        walking_P = list()
+        for c in range(91):
+            cell = Cell(c)
+            if promoting[Player.WHITE] & cell.flag:
+                steps = []
+            elif cell.native() == Piece.P:
+                steps = [1, 2]
+            else:
+                steps = [1]
+            cells = set()
+            for s in steps:
+                cells.add(Cell(c + s))
+            bb = BitBoard.by_cells(cells)
+            walking_P.append(bb)
+        walking_P = tuple(walking_P)
+        walking_p = list()
+        for c in range(91):
+            cell = Cell(c).turntable()
+            walking_p.append(walking_P[cell].turntable())
+        walking_p = tuple(walking_p)
+        walking_PAWN = [None] * 2
+        
+
+    
+        
+            
+
+
+
+
 
 
     # prn 

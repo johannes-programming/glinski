@@ -312,34 +312,7 @@ class Board:
             piece = self.piece(cell)
         else:
             piece = Piece(piece)
-        if piece is None:
-            return BitBoard(0)
-        player = piece.player
-        kind = int(piece.kind)
-        allowed = ~self.occupied(player)
-        #
-        if kind == 0: # pawn
-            envs = cls._PAWN_ENV_BY_PLAYER[player]
-            return allowed & envs[cell]
-        if kind == 1: # knight
-            return allowed & cls._KNIGHT_ENV[cell]
-        if kind == 5: # king
-            return allowed & cls._KING_ENV[cell]
-        #
-        occupied = self.occupied()
-        ans = BitBoard(0)
-        if kind in {2, 4}: # bishop or queen
-            ans |= self._diagonal_attacks(
-                cell, 
-                allowed=allowed, 
-                occupied=occupied,
-            )
-        if kind in {3, 4}: # rook or queen
-            ans |= self._axial_attacks(
-                cell, 
-                allowed=allowed, 
-                occupied=occupied,
-            )
+        ans = self.occupied().attacks(cell=cell, piece=piece)
         return ans
     def bitBoard(self, piece:Piece):
         piece = Piece(piece)

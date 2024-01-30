@@ -3,13 +3,14 @@ from __future__ import annotations
 
 from enum import IntFlag
 from itertools import combinations
-from typing import Any, Iterable, List, Self, Set, Tuple
+from typing import Any, Iterable, List, Self, Set, Tuple, Dict
 
 from .cells_and_files import *
 from .cli import *
 from .strangeFuncs import *
 from .pieces import *
 from isometric import Vector
+from .players import *
 
 # __all__
 __all__ = ['BitBoard']
@@ -35,34 +36,23 @@ class BitBoard(IntFlag):
         l1, l2, l3, l4, l5, l6, 
     ) = flags()
     #
-    def _axial_attacks(self, origin):
+    def _attacks(self, *, is_diagonal, origin):
         cls = type(self)
         ans = cls(0)
         origin = Cell(origin)
         for i in range(6):
-            block = self & cls._axial_mask(origin, direction=i)
-            gap = cls._axial_gap(origin, block=block)
-            ans |= cls._axial_mask(origin, direction=i, gap=gap)
+            reach = cls._reach(
+                origin=origin, 
+                direction=i,
+                is_diagonal=is_diagonal,
+            )
+            ans |= cls._mask(
+                is_diagonal=is_diagonal,
+                origin=origin, 
+                direction=i, 
+                reach=reach,
+            )
         return ans
-    @classmethod
-    def _axial_mask(cls, origin, *, direction=None):
-        if direction is None:
-            return cls._AXIAL_BLOCK[origin]
-        return cls._AXIAL[origin][direction]
-    def _diagonal_attacks(self, origin):
-        cls = type(self)
-        ans = cls(0)
-        origin = Cell(origin)
-        for i in range(6):
-            block = self & cls._diagonal_mask(origin, direction=i)
-            gap = cls._diagonal_gap(origin, block=block)
-            ans |= cls._diagonal_mask(origin, direction=i, gap=gap)
-        return ans
-    @classmethod
-    def _diagonal_mask(cls, origin, *, direction=None):
-        if direction is None:
-            return cls._DIAGONAL_BLOCK[origin]
-        return cls._DIAGONAL[origin][direction]
     @classmethod
     def _env(cls, *units, origin, rotate):
         origin = Cell(origin)
@@ -88,26 +78,11 @@ class BitBoard(IntFlag):
             ans.append(env)
         ans = tuple(ans)
         return ans
-    def _masksgap(self, 
-        origin:Cell, 
-        mask:Self,
-    ) -> int:
-        cls = type(self)
-        origin = Cell(origin)
-        key = mask & self
-        ans = cls._GAPS_BY_ORIGIN[origin][key]
-        return ans
     @classmethod
-    def _gaps(cls, origin:Cell):
-        ans = dict()
-        for y in range(2):
-            if y:
-                rays = origin.diagonal_ray
-            else:
-                rays = origin.axial_ray
-            for i in range(6):
-                ans.update(cls._raygaps(rays(i)))
-        return ans
+    def _mask(cls, *, is_diagonal, origin, direction, reach=None):
+        if reach is None:
+            return cls._BLOCKING[is_diagonal][origin][direction]
+        return cls._MASKING[is_diagonal][origin][direction][reach]
     @classmethod
     def _powerset(s):
         s = set(s)
@@ -116,15 +91,33 @@ class BitBoard(IntFlag):
             ans.update(combinations(s, r))
         return ans
     @classmethod
-    def _raygaps(cls, ray:Tuple[Cell]):
-        ans = dict()
-        for value, closest in enumerate(ray):
-            options = ray[value + 1:]
+    def _rayreach(cls, 
+        ray:Tuple[Cell],
+    ) -> Dict[Self, int]:
+        ans = {cls(0):-1}
+        if len(ray) == 0:
+            return ans
+        ray = ray[:-1]
+        for i, closest in enumerate(ray):
+            value = i + 1
+            options = ray[value:]
             for comb in cls._powerset(options):
                 cells = {closest} | set(comb)
                 key = cls.by_cells(cells)
                 ans[key] = value
         return ans
+    def _reach(self, *, 
+        is_diagonal, 
+        direction, 
+        origin,
+    ) -> int:
+        cls = type(self)
+        block = self & cls._mask(
+            is_diagonal=is_diagonal,
+            origin=origin, 
+            direction=direction,
+        )
+        return cls._REACHING[origin][block]
     @classmethod
     def _setup(cls):
         #
@@ -151,11 +144,12 @@ class BitBoard(IntFlag):
             rotate=False,
         )
         #
-        for y in range(2):
+        mmmmm = list()
+        for is_diagonal in range(2):
             mmmm = list()
             for c in range(91):
                 o = Cell(c)
-                if y:
+                if is_diagonal:
                     rays = o.diagonal_ray
                 else:
                     rays = o.axial_ray
@@ -171,21 +165,88 @@ class BitBoard(IntFlag):
                 mmm = tuple(mmm)
                 mmmm.append(mmm)
             mmmm = tuple(mmmm)
-            if y:
-                cls._DIAGONAL = mmmm
-            else:
-                cls._AXIAL = mmmm
+            mmmmm.append(mmmm)
+        mmmmm = tuple(mmmmm)
+        cls._MASKING = mmmmm
         #
-        cls._GAPS_BY_ORIGIN = [None] * 91
-        for o in Cell:
-            me = {cls(0):-1}
+        bbbb = list()
+        for is_diagonal in range(2):
+            bbb = list()
+            for c in range(91):
+                bb = list()
+                for i in range(6):
+                    if len(cls._MASKING[is_diagonal][c][i]) < 2:
+                        j = -1
+                    else:
+                        j = -2
+                    b = cls._MASKING[is_diagonal][c][i][j]
+                    bb.append(b)
+                bb = tuple(bb)
+                bbb.append(bb)
+            bbb = tuple(bbb)
+            bbbb.append(bbb)
+        bbbb = tuple(bbbb)
+        cls._BLOCKING = bbbb
+        #
+        rrr = list()
+        for c in range(91):
+            o = Cell(c)
+            rr = {cls(0):-1}
             rays = list()
             for i in range(6):
                 rays.append(o.axial_ray(i))
                 rays.append(o.diagonal_ray(i))
             for ray in rays:
-                me.update(cls._raygaps(ray))
-            cls._GAPS_BY_ORIGIN[o] = me
+                rr.update(cls._rayreach(ray))
+            rrr.append(rr)
+        rrr = tuple(rrr)
+        cls._REACHING = rrr
+        # 
+        black_www = list()
+        for c in range(91):
+            cell = Cell(c)
+            if cell.rank == 1:
+                ww = dict()
+                ww[BitBoard(0)] = BitBoard(0)
+                black_www.append(ww)
+                continue
+            one_ahead = Cell(c - 1)
+            if cell.native() != Piece.b:
+                ww = dict()
+                ww[BitBoard(0)] = BitBoard(one_ahead.flag)
+                ww[BitBoard(one_ahead.flag)] = BitBoard(0)
+                black_www.append(ww)
+                continue
+            two_ahead = Cell(c - 2)
+            bb_null = BitBoard(0)
+            bb_one = BitBoard.by_cells({one_ahead})
+            bb_two = BitBoard.by_cells({two_ahead})
+            bb_both = BitBoard.by_cells({one_ahead, two_ahead})
+            ww[bb_null] = bb_both
+            ww[bb_one] = bb_null
+            ww[bb_two] = bb_one
+            ww[bb_both] = bb_null
+            black_www.append(ww)
+        black_www = tuple(black_www)
+        white_www = list()
+        for c in range(91):
+            ww = dict()
+            for k, v in black_www[90 - c]:
+                ww[k.turntable()] = v.turntable()
+            white_www.append(ww)
+        white_www = tuple(white_www)
+        wwww = [None] * 2
+        wwww[Player.WHITE] = white_www
+        wwww[Player.BLACK] = black_www
+        wwww = tuple(wwww)
+        cls._WALKING = wwww
+
+
+
+
+
+
+
 
 
 
@@ -216,60 +277,45 @@ class BitBoard(IntFlag):
         cell = Cell(cell)
         piece = Piece(piece)
         kind = piece.kind
-        free = ~self
         if piece == Piece.P:
-            return cls._ENVS_FOR_P[cell] & ~free
+            return cls._ENVS_FOR_P[cell]
         if piece == Piece.p:
-            return cls._ENVS_FOR_p[cell] & ~free
+            return cls._ENVS_FOR_p[cell]
         if kind == Piece.Kind.KNIGHT:
-            return cls._ENVS_FOR_KNIGHT[cell] & ~free
+            return cls._ENVS_FOR_KNIGHT[cell]
         if kind == Piece.Kind.KING:
-            return cls._ENVS_FOR_KING[cell] & ~free
+            return cls._ENVS_FOR_KING[cell]
         ans = cls(0)
         if kind != Piece.Kind.ROOK:
-            ans |= self._diagonal_attacks(cell)
+            ans |= self._attacks(is_diagonal=1, origin=cell)
         if kind != Piece.Kind.BISHOP:
-            ans |= self._axial_attacks(cell)
+            ans |= self._attacks(is_diagonal=0, origin=cell)
         return ans
 
         
 
-    @classmethod
-    def axial_mask(cls, 
-        origin, *,
-        direction:int,
-        gap:int=-1,
-    ) -> Tuple[Self]:
-        origin = Cell(origin)
-        direction %= 6
-        ans = cls._AXIAL[origin][direction][gap]
-        return ans
-    def axial_gap(self, 
+    def axial_reach(self, 
         origin, *, 
         direction,
     ) -> int:
-        return self._masksgap(
-            origin,
-            self.axial_mask(direction),
-        )
-    @classmethod
-    def diagonal_mask(cls, 
-        origin, *,
-        direction:int,
-        gap:int=-1,
-    ) -> Tuple[Self]:
         origin = Cell(origin)
-        direction %= 6
-        ans = cls._DIAGONAL[origin][direction][gap]
+        ans = self._reach(
+            is_diagonal=0,
+            direction=direction,
+            origin=origin,
+        )
         return ans
-    def diagonal_gap(self, 
+    def diagonal_reach(self, 
         origin, *, 
         direction,
     ) -> int:
-        return self._masksgap(
-            origin, 
-            self.diagonal_mask(direction),
+        origin = Cell(origin)
+        ans = self._reach(
+            is_diagonal=1,
+            direction=direction,
+            origin=origin,
         )
+        return ans
     def text(self) -> str:
         symbols = ['.'] * 91
         for cell in Cell:
@@ -285,5 +331,17 @@ class BitBoard(IntFlag):
         integer = int(binary, 2)
         ans = cls(integer)
         return ans
+    def walks(self, cell, piece) -> Self:
+        cls = type(self)
+        cell = Cell(cell)
+        piece = Piece(piece)
+        if piece.kind != Piece.Kind.PAWN:
+            ans = self.attacks(cell=cell, piece=piece)
+            ans &= ~self
+        mask = cls._WALKING[piece.player][cell][BitBoard(0)]
+        block = self & mask
+        ans = cls._WALKING[piece.player][cell][block]
+        return ans
+
     
 BitBoard._setup()
